@@ -1,0 +1,278 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String
+  avatar        String?
+  points        Int      @default(0)
+  
+  // Reputation fields
+  totalVotesReceived   Int @default(0)
+  positiveVotesReceived Int @default(0)
+  validationsGiven     Int @default(0)
+  accuracyScore        Float @default(50) // 0-100 percentage
+  priceReportsCount    Int @default(0)    // For photo requirement threshold
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  prices        Price[]
+  validations   PriceValidation[]
+  shoppingLists ShoppingList[]
+  passwordResets PasswordReset[]
+  favoriteStores FavoriteStore[]
+}
+
+model Store {
+  id           String   @id @default(cuid())
+  name         String
+  category     String   // mercado, farmacia, pet, hortifruti, combustivel, outros
+  lat          Float
+  lng          Float
+  address      String
+  placeId      String?  @unique // External place ID (OSM or Google)
+  source       String   @default("manual") // manual, osm, google
+  trustScore   Int      @default(50)
+  
+  // Opening hours (JSON format: {"mon": "08:00-22:00", "tue": "08:00-22:00", ...})
+  openingHours String?  // JSON string
+  isOpen       Boolean  @default(true)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  prices       Price[]
+  favoritedBy  FavoriteStore[]
+
+  @@index([category])
+  @@index([lat, lng])
+}
+
+model Price {
+  id           String   @id @default(cuid())
+  product      String
+  price        Float
+  unit         String
+  hasPhoto     Boolean  @default(false)
+  photoUrl     String?
+  votes        Int      @default(0)
+  
+  // Validation tracking
+  validationCount Int   @default(0)
+  lastValidatedAt DateTime?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  storeId      String
+  
+  reporter     User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterId   String
+  
+  validations  PriceValidation[]
+
+  @@index([storeId])
+  @@index([reporterId])
+  @@index([product])
+  @@index([createdAt]) // For freshness queries
+}
+
+// Price validation by users
+model PriceValidation {
+  id        String   @id @default(cuid())
+  isCorrect Boolean  // true = confirms price, false = disputes
+  comment   String?
+  createdAt DateTime @default(now())
+  
+  price     Price    @relation(fields: [priceId], references: [id], onDelete: Cascade)
+  priceId   String
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  @@unique([priceId, userId]) // User can only validate once per price
+  @@index([priceId])
+  @@index([userId])
+}
+
+// Product catalog for search
+model Product {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  aliases     String[] // Alternative names/search terms
+  category    String   // mercado, farmacia, pet, etc
+  unit        String   @default("un") // Default unit
+  barcode     String?  @unique
+  brand       String?
+  size        String?  // e.g., "500g", "1L"
+  imageUrl    String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  priceHistory PriceHistory[]
+
+  @@index([name])
+  @@index([category])
+  @@index([barcode])
+}
+
+// Shopping lists
+model ShoppingList {
+  id        String   @id @default(cuid())
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  
+  items     ShoppingListItem[]
+  shares    ShoppingListShare[]
+
+  @@index([userId])
+}
+
+model ShoppingListItem {
+  id          String   @id @default(cuid())
+  productName String
+  quantity    Float    @default(1)
+  unit        String   @default("un")
+  isChecked   Boolean  @default(false)
+  notes       String?
+  
+  // Best price found
+  bestPrice   Float?
+  bestStoreId String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  list        ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  listId      String
+
+  @@index([listId])
+  @@index([productName])
+}
+
+// Price history for trend tracking
+model PriceHistory {
+  id         String   @id @default(cuid())
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  
+  productName String  // Denormalized for when product doesn't exist
+  storeId     String
+  price       Float
+  recordedAt  DateTime @default(now())
+
+  @@index([productName, storeId])
+  @@index([productId])
+  @@index([recordedAt])
+}
+
+// Push notification subscriptions
+model PushSubscription {
+  id          String   @id @default(cuid())
+  userId      String
+  endpoint    String   @unique
+  p256dh      String   // Public key
+  auth        String   // Auth secret
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+}
+
+// Price alerts - notify when price drops
+model PriceAlert {
+  id          String   @id @default(cuid())
+  userId      String
+  productName String
+  storeId     String?  // Null means any store
+  targetPrice Float?   // Notify when price <= this
+  isActive    Boolean  @default(true)
+  lastNotified DateTime?
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+  @@index([productName])
+}
+
+// File uploads
+model Upload {
+  id          String   @id @default(cuid())
+  userId      String
+  filename    String
+  mimeType    String
+  size        Int
+  url         String
+  storageKey  String   // Key in cloud storage
+  
+  // OCR extracted data
+  ocrText     String?
+  ocrPrices   String?  // JSON array of extracted prices
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+}
+
+// Password reset tokens
+model PasswordReset {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  
+  @@index([token])
+  @@index([userId])
+}
+
+// User's favorite stores
+model FavoriteStore {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  storeId   String
+  
+  @@unique([userId, storeId])
+  @@index([userId])
+}
+
+// Collaborative shopping list sharing
+model ShoppingListShare {
+  id         String   @id @default(cuid())
+  email      String   // Email of invited user
+  permission String   @default("edit") // "view" | "edit"
+  accepted   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  
+  list       ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  listId     String
+  
+  @@unique([listId, email])
+  @@index([email])
+  @@index([listId])
+}
+

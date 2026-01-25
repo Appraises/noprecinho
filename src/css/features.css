@@ -1,0 +1,244 @@
+/* Comparison Modal Styles */
+
+.comparison-stats {
+    display: flex;
+    justify-content: space-around;
+    padding: 1rem;
+    background: var(--color-background);
+    border-radius: 12px;
+    margin-bottom: 1rem;
+}
+
+.comparison-stat {
+    text-align: center;
+}
+
+.comparison-stat__value {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.comparison-stat__label {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.comparison-stat--highlight .comparison-stat__value {
+    color: var(--color-primary);
+    font-size: 1.5rem;
+}
+
+/* Comparison Table */
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.comparison-table th {
+    text-align: left;
+    padding: 0.75rem 0.5rem;
+    border-bottom: 2px solid var(--color-border);
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.comparison-table td {
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: top;
+}
+
+.comparison-table tbody tr:hover {
+    background: var(--color-background);
+}
+
+.comparison-row--best {
+    background: rgba(0, 200, 150, 0.08);
+}
+
+.comparison-row--best:hover {
+    background: rgba(0, 200, 150, 0.12) !important;
+}
+
+.comparison-store {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.comparison-store strong {
+    font-weight: 600;
+}
+
+.comparison-store small {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.comparison-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #B45309;
+    background: #FEF3C7;
+    padding: 0.125rem 0.5rem;
+    border-radius: 50px;
+    margin-bottom: 0.25rem;
+}
+
+[data-theme="dark"] .comparison-badge {
+    background: #78350F;
+    color: #FDE68A;
+}
+
+.comparison-price {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.comparison-price--best {
+    color: var(--color-primary);
+    font-size: 1rem;
+}
+
+.text-danger {
+    color: #EF4444;
+}
+
+.text-success {
+    color: #10B981;
+}
+
+.text-muted {
+    color: var(--color-text-secondary);
+}
+
+/* Validation Badge on Price Cards */
+.validation-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 50px;
+    font-weight: 500;
+}
+
+.validation-badge--trusted {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.validation-badge--new {
+    background: #DBEAFE;
+    color: #1E40AF;
+}
+
+[data-theme="dark"] .validation-badge--trusted {
+    background: #064E3B;
+    color: #6EE7B7;
+}
+
+[data-theme="dark"] .validation-badge--new {
+    background: #1E3A8A;
+    color: #93C5FD;
+}
+
+/* Reputation Badge */
+.reputation-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    color: var(--color-text-secondary);
+}
+
+.reputation-badge--high {
+    color: #10B981;
+}
+
+.reputation-badge--medium {
+    color: #F59E0B;
+}
+
+.reputation-badge--low {
+    color: #EF4444;
+}
+
+/* Confirm Price Button */
+.confirm-price-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.confirm-price-btn:hover {
+    background: #D1FAE5;
+    border-color: #10B981;
+}
+
+.confirm-price-btn--confirmed {
+    background: #D1FAE5;
+    border-color: #10B981;
+    color: #065F46;
+}
+
+[data-theme="dark"] .confirm-price-btn:hover,
+[data-theme="dark"] .confirm-price-btn--confirmed {
+    background: #064E3B;
+    color: #6EE7B7;
+}
+
+/* Open Now Badge */
+.open-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 50px;
+    font-weight: 500;
+}
+
+.open-badge--open {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.open-badge--closed {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+/* Store Hours */
+.store-hours {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.store-hours__row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+}
+
+.store-hours__row--today {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}

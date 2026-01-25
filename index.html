@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PreçoJá - O Waze dos Preços</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/css/landing.css">
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <a href="/" class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                style="color: var(--l-primary);">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                <circle cx="12" cy="9" r="2.5" />
+            </svg>
+            PreçoJá
+        </a>
+        <div class="nav-cta">
+            <a href="/login.html" class="btn btn-login">Entrar</a>
+            <a href="/signup.html" class="btn btn-signup">Começar Agora</a>
+        </div>
+    </nav>
+
+    <main>
+        <div class="hero-wrapper">
+            <div class="hero-bg"></div>
+
+            <div class="hero-content">
+                <h1>Pare de pagar caro. Saiba onde é mais barato.</h1>
+                <p>O PreçoJá ajuda você a encontrar o menor preço em mercados, farmácias e postos perto de você. Uma
+                    comunidade que economiza junta.</p>
+
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: flex-start;">
+                    <a href="/signup.html" class="btn btn-signup" style="padding: 1rem 2rem; font-size: 1.1rem;">Criar
+                        conta grátis</a>
+                    <a href="#how-it-works" class="btn btn-login" style="border: 1px solid var(--l-border);">Como
+                        funciona?</a>
+                </div>
+
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <strong>+50k</strong>
+                        <span>Usuários</span>
+                    </div>
+                    <div class="stat-item">
+                        <strong>24h</strong>
+                        <span>Preços em tempo real</span>
+                    </div>
+                    <div class="stat-item">
+                        <strong>R$ 0</strong>
+                        <span>Custo para usar</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hero-visual">
+                <div class="mock-map" id="anim-map">
+                    <!-- Cursor for animation -->
+                    <div class="cursor-hand" id="anim-cursor"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { auth } from './src/js/auth.js';
+
+        // Auth Check
+        if (auth.isAuthenticated()) {
+            document.querySelector('.nav-cta').innerHTML = `
+                <a href="/app.html" class="btn btn-signup">Ir para o App</a>
+            `;
+        }
+
+        // Animation Logic
+        const mapEl = document.getElementById('anim-map');
+        const cursorEl = document.getElementById('anim-cursor');
+
+        function createMarker(x, y, icon, price, label) {
+            const el = document.createElement('div');
+            el.className = 'marker';
+            el.style.left = x + '%';
+            el.style.top = y + '%';
+            el.innerHTML = icon;
+            el.setAttribute('data-price', price);
+
+            const tooltip = document.createElement('div');
+            tooltip.className = 'price-tooltip';
+            tooltip.innerHTML = `<span>${label}</span>${price}`;
+            el.appendChild(tooltip);
+
+            mapEl.appendChild(el);
+            return el;
+        }
+
+        async function runAnimationLoop() {
+            // 1. Initial State: Clear markers (except cursor)
+            const existing = mapEl.querySelectorAll('.marker');
+            existing.forEach(e => e.remove());
+
+            // Reset cursor
+            cursorEl.style.transition = 'none';
+            cursorEl.style.transform = 'translate(10px, 10px)';
+            cursorEl.style.opacity = '1';
+
+            // 2. Scenario: Finding a product
+            const storeA = createMarker(30, 40, '🛒', 'R$ 22,90', 'Mercado A'); // Expensive
+            const storeB = createMarker(70, 60, '🛒', 'R$ 14,50', 'Mercado B'); // Cheap
+
+            await wait(1500);
+
+            // 3. Check Store A (Expensive)
+            cursorEl.style.transition = 'all 1s cubic-bezier(0.25, 0.1, 0.25, 1)';
+            cursorEl.style.transform = `translate(${storeA.offsetLeft + 15}px, ${storeA.offsetTop + 15}px)`;
+
+            await wait(1000);
+            storeA.classList.add('active');
+            storeA.querySelector('.price-tooltip').classList.add('expensive');
+
+            await wait(1500);
+
+            // 4. Check Store B (Cheap)
+            cursorEl.style.transform = `translate(${storeB.offsetLeft + 15}px, ${storeB.offsetTop + 15}px)`;
+
+            await wait(1000);
+            storeB.classList.add('active');
+            storeB.querySelector('.price-tooltip').classList.add('cheap');
+
+            // 5. Select Store B
+            await wait(500);
+            cursorEl.style.transform = `translate(${storeB.offsetLeft + 15}px, ${storeB.offsetTop + 15}px) scale(0.8)`; // Click press
+
+            await wait(200);
+            cursorEl.style.transform = `translate(${storeB.offsetLeft + 15}px, ${storeB.offsetTop + 15}px) scale(1)`; // Click release
+
+            // Pulse effect for success
+            const ripple = document.createElement('div');
+            ripple.style.position = 'absolute';
+            ripple.style.left = storeB.offsetLeft + 'px';
+            ripple.style.top = storeB.offsetTop + 'px';
+            ripple.style.width = '40px';
+            ripple.style.height = '40px';
+            ripple.style.borderRadius = '50%';
+            ripple.style.border = '2px solid #059669';
+            ripple.style.transition = 'all 0.6s ease-out';
+            mapEl.appendChild(ripple);
+
+            setTimeout(() => {
+                ripple.style.transform = 'scale(3)';
+                ripple.style.opacity = '0';
+            }, 50);
+
+            // 6. Reset loop
+            await wait(4000);
+            storeA.classList.remove('active');
+            storeB.classList.remove('active');
+            ripple.remove();
+
+            runAnimationLoop();
+        }
+
+        function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        // Start animation
+        runAnimationLoop();
+
+    </script>
+</body>
+
+</html>

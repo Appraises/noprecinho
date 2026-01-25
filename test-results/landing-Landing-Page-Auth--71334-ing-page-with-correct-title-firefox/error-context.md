@@ -1,0 +1,46 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - link "PreçoJá" [ref=e3] [cursor=pointer]:
+      - /url: /
+      - img [ref=e4]
+      - text: PreçoJá
+    - generic [ref=e7]:
+      - link "Entrar" [ref=e8] [cursor=pointer]:
+        - /url: /login.html
+      - link "Começar Agora" [ref=e9] [cursor=pointer]:
+        - /url: /signup.html
+  - main [ref=e10]:
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - heading "Pare de pagar caro. Saiba onde é mais barato." [level=1] [ref=e13]
+        - paragraph [ref=e14]: O PreçoJá ajuda você a encontrar o menor preço em mercados, farmácias e postos perto de você. Uma comunidade que economiza junta.
+        - generic [ref=e15]:
+          - link "Criar conta grátis" [ref=e16] [cursor=pointer]:
+            - /url: /signup.html
+          - link "Como funciona?" [ref=e17] [cursor=pointer]:
+            - /url: "#how-it-works"
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - strong [ref=e20]: +50k
+            - text: Usuários
+          - generic [ref=e21]:
+            - strong [ref=e22]: 24h
+            - text: Preços em tempo real
+          - generic [ref=e23]:
+            - strong [ref=e24]: R$ 0
+            - text: Custo para usar
+      - generic [ref=e26]:
+        - generic [ref=e27] [cursor=pointer]:
+          - text: 🛒
+          - generic:
+            - generic: Mercado A
+            - text: R$ 22,90
+        - generic [ref=e28] [cursor=pointer]:
+          - text: 🛒
+          - generic:
+            - generic: Mercado B
+            - text: R$ 14,50
+```

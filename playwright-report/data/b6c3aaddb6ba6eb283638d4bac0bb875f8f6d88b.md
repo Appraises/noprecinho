@@ -1,0 +1,91 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - link "Pular para o mapa" [ref=e2] [cursor=pointer]:
+    - /url: "#map"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - img [ref=e6]
+        - generic [ref=e9]: PreçoJá
+      - generic [ref=e10]:
+        - img
+        - searchbox "Buscar" [ref=e11]
+      - generic [ref=e12]:
+        - generic "Seus pontos" [ref=e13]:
+          - img [ref=e14]
+          - generic [ref=e16]: "0"
+          - generic [ref=e17]: pontos
+        - button "Menu do usuário" [ref=e18] [cursor=pointer]:
+          - img "Test User" [ref=e19]
+    - navigation "Categorias" [ref=e20]:
+      - button "Todos" [ref=e21] [cursor=pointer]:
+        - generic [ref=e22]: Todos
+      - button "🛒 Mercado" [ref=e23] [cursor=pointer]:
+        - generic [ref=e24]: 🛒
+        - generic [ref=e25]: Mercado
+      - button "🥬 Hortifrúti" [ref=e26] [cursor=pointer]:
+        - generic [ref=e27]: 🥬
+        - generic [ref=e28]: Hortifrúti
+      - button "💊 Farmácia" [ref=e29] [cursor=pointer]:
+        - generic [ref=e30]: 💊
+        - generic [ref=e31]: Farmácia
+      - button "🐾 Pet" [ref=e32] [cursor=pointer]:
+        - generic [ref=e33]: 🐾
+        - generic [ref=e34]: Pet
+      - button "⛽ Combustível" [ref=e35] [cursor=pointer]:
+        - generic [ref=e36]: ⛽
+        - generic [ref=e37]: Combustível
+      - button "📦 Outros" [ref=e38] [cursor=pointer]:
+        - generic [ref=e39]: 📦
+        - generic [ref=e40]: Outros
+    - main [ref=e41]:
+      - application "Mapa de preços" [ref=e42]:
+        - generic:
+          - generic [ref=e43]:
+            - button "Zoom in" [ref=e44] [cursor=pointer]: +
+            - button "Zoom out" [ref=e45] [cursor=pointer]: −
+          - generic [ref=e46]:
+            - link "Leaflet" [ref=e47] [cursor=pointer]:
+              - /url: https://leafletjs.com
+              - img [ref=e48]
+              - text: Leaflet
+            - text: "| ©"
+            - link "OpenStreetMap" [ref=e52] [cursor=pointer]:
+              - /url: https://www.openstreetmap.org/copyright
+      - complementary [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]: 🏪
+          - generic [ref=e56]:
+            - heading "Nome da Loja" [level=2] [ref=e57]
+            - generic [ref=e58]:
+              - generic [ref=e59]: Categoria
+              - generic [ref=e60]: •
+              - generic [ref=e61]: 0.0 km
+          - button "×" [ref=e62] [cursor=pointer]
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - generic [ref=e65]: Melhor preço
+            - generic [ref=e66]: R$ 0,00
+          - button "Ver detalhes" [ref=e67] [cursor=pointer]
+      - generic:
+        - button "Reportar preço" [ref=e68] [cursor=pointer]:
+          - generic [ref=e69]: +
+        - button "Filtros" [ref=e70] [cursor=pointer]:
+          - img [ref=e71]
+        - button "Minha localização" [ref=e73] [cursor=pointer]:
+          - img [ref=e74]
+      - generic [ref=e77]:
+        - generic [ref=e78]: Legenda
+        - generic [ref=e81]: Loja selecionada
+        - generic [ref=e84]: Comprovado
+      - complementary "Lista de preços" [ref=e85]:
+        - generic [ref=e86]:
+          - heading "Melhores preços" [level=2] [ref=e87]
+          - button "Fechar" [ref=e88] [cursor=pointer]: ×
+    - option "Menor preço" [selected]
+    - option "Mais próximo"
+    - option "Mais recente"
+    - option "Mais confiável"
+```

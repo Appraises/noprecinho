@@ -1,0 +1,312 @@
+/* Report Modal Custom Styles */
+.report-header {
+    text-align: center;
+    margin-bottom: var(--space-6);
+}
+
+.report-title {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+}
+
+.report-subtitle {
+    color: var(--color-text-secondary);
+}
+
+/* Options Grid */
+.report-options {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+}
+
+.report-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    text-align: left;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    width: 100%;
+}
+
+.report-card:hover {
+    background: var(--color-surface-elevated);
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.report-card__icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform var(--transition-fast);
+}
+
+.bg-icon-primary {
+    background: rgba(var(--color-primary-rgb), 0.1);
+}
+
+.bg-icon-secondary {
+    background: rgba(var(--color-secondary-rgb), 0.1);
+}
+
+.report-card:hover .report-card__icon-wrapper {
+    transform: scale(1.1);
+}
+
+.report-card__icon {
+    font-size: 24px;
+}
+
+.report-card__content {
+    flex: 1;
+}
+
+.report-card__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-1);
+}
+
+.report-card__title {
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+}
+
+.report-card__description {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+.report-footer-note {
+    margin-top: var(--space-6);
+    text-align: center;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+/* Manual Mode Styles */
+.report-section-header {
+    margin-bottom: var(--space-4);
+}
+
+.report-section-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-1);
+}
+
+.report-section-subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+.store-search-container {
+    position: relative;
+    margin-bottom: var(--space-4);
+}
+
+.search-icon {
+    position: absolute;
+    left: var(--space-3);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+}
+
+.search-input {
+    padding-left: var(--space-10) !important;
+    width: 100%;
+}
+
+.store-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: var(--space-1);
+}
+
+.price-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-surface);
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.price-card:hover {
+    background: var(--color-surface-elevated);
+}
+
+/* Selected state using classes instead of Tailwind utilties */
+.price-card.selected {
+    border-color: var(--color-primary);
+    background: rgba(var(--color-primary-rgb), 0.05);
+    box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.price-card__image {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--color-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: var(--shadow-sm);
+}
+
+.price-card__product {
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+}
+
+.price-card__store {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+}
+
+.check-icon {
+    color: var(--color-primary);
+    font-weight: bold;
+}
+
+/* Product Entry Styles */
+.selected-store-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    background: var(--color-surface-elevated);
+    padding: var(--space-2);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-6);
+}
+
+.btn-link-small {
+    color: var(--color-primary);
+    background: none;
+    border: none;
+    font-size: var(--font-size-xs);
+    text-decoration: underline;
+    cursor: pointer;
+    margin-left: var(--space-2);
+}
+
+.price-input-wrapper {
+    position: relative;
+    max-width: 200px;
+}
+
+.currency-symbol {
+    position: absolute;
+    left: var(--space-4);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--color-text-muted);
+}
+
+.price-input-large {
+    padding-left: var(--space-12) !important;
+    font-size: 1.5rem !important;
+    font-weight: bold !important;
+    color: var(--color-primary) !important;
+    width: 100%;
+}
+
+.photo-section-card {
+    padding: var(--space-4);
+    background: var(--color-surface-elevated);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-border);
+}
+
+.photo-toggle-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.photo-toggle-label {
+    font-weight: var(--font-weight-medium);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.photo-toggle-icon {
+    color: var(--color-primary);
+    font-size: var(--font-size-xl);
+}
+
+.photo-upload-container {
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    margin-top: var(--space-4);
+    transition: border-color var(--transition-fast);
+}
+
+.photo-upload-container:hover {
+    border-color: var(--color-primary);
+}
+
+.photo-upload-area {
+    padding: var(--space-4);
+    text-align: center;
+    cursor: pointer;
+}
+
+.photo-preview-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.photo-preview {
+    max-height: 120px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-remove-photo {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ff4757;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+}
+
+.btn-remove-photo:hover {
+    transform: scale(1.1);
+}
