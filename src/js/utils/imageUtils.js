@@ -195,69 +195,136 @@ function loadImage(file) {
     });
 }
 
-// STRICT RECEIPT PARSING STRATEGY
-// Looks for lines that have a price at the end, and treats the start as product name
+// ROBUST RECEIPT PARSING STRATEGY
+// Uses multiple patterns to extract product names and prices from various receipt formats
 function extractReceiptItems(text) {
     const lines = text.split('\n').filter(l => l.trim().length > 3);
     const items = [];
+    const seenProducts = new Set(); // Avoid duplicates
 
-    // Regex for price at the end of line, allowing for some trailing non-digit noise (like ')' or 'A')
-    // Matches: "Arroz 5kg  12,99 )" or "10,00 A"
-    const priceEndPattern = /(\d{1,3}[.,]\d{2})\s*[^\d]*$/;
-    
-    // Regex to ignore validation lines
-    const ignorePattern = /TOTAL|SUBTOTAL|TROCO|DINHEIRO|CARTAO|CREDITO|DEBITO|VALOR|ITENS|CNPJ|CPF|DATA|QTD|UN|VL|UNIT|IMPOSTOS/i;
+    // Multiple price patterns to try (ordered by specificity)
+    const pricePatterns = [
+        // Pattern 1: Price followed by ) at end - "PRODUTO 5,48)"
+        /(\d{1,4}[.,]\d{2})\s*\)\s*$/,
+        // Pattern 2: Price with trailing characters like Fi, FE, A, etc - "PRODUTO Fi 5,48)"
+        /(\d{1,4}[.,]\d{2})\s*(?:\)|[A-Z]{1,2})?\s*$/i,
+        // Pattern 3: Price in parentheses - "(5,29)"
+        /\((\d{1,4}[.,]\d{2})\)/,
+        // Pattern 4: Standard price at end with possible noise - "PRODUTO 12,99 A"
+        /(\d{1,4}[.,]\d{2})\s*[^\d,\.]*$/,
+        // Pattern 5: Price preceded by R$ - "R$ 5,99"
+        /R\$\s*(\d{1,4}[.,]\d{2})/i,
+        // Pattern 6: Price with percentage before it (tax) - "T19,00% 6,99"
+        /[A-Z]?\d{1,2}[.,]\d{2}%\s*(\d{1,4}[.,]\d{2})/,
+        // Pattern 7: Any decimal number that looks like a price
+        /\b(\d{1,4}[.,]\d{2})\b(?!%)/
+    ];
+
+    // Regex to ignore validation/summary lines
+    const ignorePattern = /^(?:TOTAL|SUBTOTAL|TROCO|DINHEIRO|CART[AÃ]O|CREDITO|DEBITO|VALOR\s*(?:TOTAL|PAGO)?|ITENS?|CNPJ|CPF|DATA|QTD|QUANTIDADE|VL\s*UNIT|IMPOSTOS?|DESCONTO|ACRESCIMO|SAT|NFCe|CUPOM|FISCAL|TRIBUT)/i;
+
+    // Pattern to identify product code lines (codes at start)
+    const codeStartPattern = /^[\dOo]{2,4}\s+[\dA-Z]{6,}/i;
 
     lines.forEach(line => {
         const cleanLine = line.trim();
-        
-        // Skip noise lines
+
+        // Skip empty or too short lines
+        if (cleanLine.length < 5) return;
+
+        // Skip noise/summary lines
         if (ignorePattern.test(cleanLine)) return;
-        
-        // Check if line ends with a price
-        const priceMatch = cleanLine.match(priceEndPattern);
-        
-        if (priceMatch) {
-            const priceStr = priceMatch[1].replace(',', '.');
-            const price = parseFloat(priceStr);
-            
-            // Basic sanity check for price
-            if (isNaN(price) || price <= 0 || price > 5000) return;
-            
-            // Extract product name (everything before the price)
-            let productName = cleanLine.substring(0, priceMatch.index).trim();
-            
-            // Clean up common receipt noise often found in product names
-            // Remove leading numbers/codes (e.g. "001 123456 PRODUCT")
-            // Repeatedly remove leading digits followed by space
-            productName = productName.replace(/^[\d\s]+/, '');
-            
-            // Extract quantity if present inside the name part (e.g. "2x" or "2 UN")
-            // This is simple extraction, might not catch "2 x 5,00" format perfectly but covers basics
-            let quantity = 1;
-            const qtyMatch = productName.match(/(\d+)\s*(?:UN|X|CX|PC)/i);
-            if (qtyMatch) {
-                quantity = parseInt(qtyMatch[1]);
+
+        // Skip lines that are mostly numbers (likely codes or totals)
+        const numericRatio = (cleanLine.match(/\d/g) || []).length / cleanLine.length;
+        if (numericRatio > 0.7 && cleanLine.length < 15) return;
+
+        let priceFound = null;
+        let priceIndex = -1;
+
+        // Try each pattern until we find a price
+        for (const pattern of pricePatterns) {
+            const match = cleanLine.match(pattern);
+            if (match) {
+                const priceStr = match[1].replace(',', '.');
+                const price = parseFloat(priceStr);
+
+                // Sanity check for price
+                if (!isNaN(price) && price > 0.01 && price < 10000) {
+                    priceFound = price;
+                    priceIndex = match.index;
+                    break;
+                }
             }
-
-            // Remove code patterns like (12345)
-            productName = productName.replace(/\(\d+\)/, '').trim();
-            
-            // Remove tax codes at end (e.g. F1, T17,00%) which often appear before price
-            productName = productName.replace(/\s+[A-Z]\d{1,2}(?:,\d+%)?\s*$/i, '').trim();
-
-            // If name is too short after cleaning, it's likely noise
-            if (productName.length < 3) return;
-
-            items.push({
-                product: productName,
-                price: price,
-                quantity: quantity,
-                confidence: 0.8 // Heuristic confidence
-            });
         }
+
+        if (priceFound === null) return;
+
+        // Extract product name (everything before the price)
+        let productName = cleanLine.substring(0, priceIndex).trim();
+
+        // If product name is empty, try to get text before any number pattern
+        if (!productName || productName.length < 2) {
+            // Try to extract name from the full line, removing codes and price
+            productName = cleanLine
+                .replace(/^\s*[\dOo]{1,4}\s+[\dA-Z]{6,}\s*/i, '') // Remove leading code
+                .replace(/\s*\(?\d{1,4}[.,]\d{2}\)?.*$/, '')       // Remove price and after
+                .trim();
+        }
+
+        // Clean up common receipt noise
+        // Remove leading item/line numbers (e.g. "001", "003")
+        productName = productName.replace(/^[\dOo]{1,4}\s+/, '');
+
+        // Remove product codes (e.g. "08871124", "U735J74Z")
+        productName = productName.replace(/^[A-Z\d]{6,}\s+/i, '');
+
+        // Remove unit codes at end (e.g. "Jun FL", "u( Fi", "Au FE")
+        productName = productName.replace(/\s+(?:[Jj]un|[Aa]u|[Uu]n|[Ii]n)\s*(?:FL?|Fi?|FE?)?\s*$/i, '');
+        productName = productName.replace(/\s+[uU]\(?\s*[Ff][iIeE]?\s*$/i, '');
+        productName = productName.replace(/\s+[Aa]\s*dls\s*$/i, '');
+
+        // Remove stray parentheses and brackets
+        productName = productName.replace(/[\(\)\[\]]/g, '').trim();
+
+        // Remove percentage patterns (tax indicators)
+        productName = productName.replace(/\s*[A-Z]?\d{1,2}[.,]\d{2}%\s*/g, ' ').trim();
+
+        // Remove codes in parentheses like (12345)
+        productName = productName.replace(/\(\d+\)/g, '').trim();
+
+        // Clean multiple spaces
+        productName = productName.replace(/\s+/g, ' ').trim();
+
+        // Final cleanup: remove any remaining leading numbers
+        productName = productName.replace(/^\d+\s+/, '');
+
+        // If name is too short after cleaning, skip
+        if (productName.length < 2) return;
+
+        // Normalize and check for duplicates
+        const normalizedName = productName.toUpperCase();
+        const duplicateKey = `${normalizedName}_${priceFound.toFixed(2)}`;
+        if (seenProducts.has(duplicateKey)) return;
+        seenProducts.add(duplicateKey);
+
+        // Extract quantity if present
+        let quantity = 1;
+        const qtyMatch = productName.match(/^(\d+)\s*[xX]\s+/);
+        if (qtyMatch) {
+            quantity = parseInt(qtyMatch[1]);
+            productName = productName.replace(qtyMatch[0], '').trim();
+        }
+
+        items.push({
+            product: productName,
+            price: priceFound,
+            quantity: quantity,
+            confidence: 0.85 // Higher confidence with improved parsing
+        });
     });
 
+    console.log(`📋 Extracted ${items.length} items from receipt`);
     return items;
 }
 
