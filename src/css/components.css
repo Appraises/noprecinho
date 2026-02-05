@@ -699,3 +699,57 @@
     font-size: var(--font-size-xs);
     color: var(--color-text-muted);
 }
+
+/* ========== VOTE BUTTONS ========== */
+.vote-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    color: var(--color-text-muted);
+}
+
+.vote-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: rgba(0, 200, 150, 0.1);
+}
+
+.vote-btn--up:hover {
+    border-color: var(--color-success);
+    color: var(--color-success);
+    background: rgba(46, 204, 113, 0.1);
+}
+
+.vote-btn--down:hover {
+    border-color: var(--color-error);
+    color: var(--color-error);
+    background: rgba(255, 107, 107, 0.1);
+}
+
+.vote-btn--active {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: rgba(0, 200, 150, 0.15);
+}
+
+.vote-btn__icon {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.price-card__actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+}

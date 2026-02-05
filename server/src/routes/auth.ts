@@ -16,6 +16,12 @@ router.post('/signup', async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
         }
 
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ error: 'Email inválido' });
+        }
+
         if (password.length < 8) {
             return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres' });
         }

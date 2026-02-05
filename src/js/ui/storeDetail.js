@@ -1,6 +1,7 @@
 // Store detail modal/page component
 import { formatPrice, formatTimeAgo, getFreshnessBadge, getTrustScoreClass, getCategoryIcon, getCategoryLabel } from '../utils/formatters.js';
 import { getStorePrices, votePrice } from '../data/mockData.js';
+import { fetchPrices } from '../api.js';
 
 import { openProofModal } from './proofViewer.js';
 
@@ -9,40 +10,54 @@ let headerElement = null;
 let bodyElement = null;
 let currentStore = null;
 let activeTab = 'prices';
+let onReportPriceCallback = null;
+let cachedPrices = [];
 
-export function initStoreDetail() {
+export function initStoreDetail(onReportPrice = null) {
   modalOverlay = document.getElementById('store-detail-modal');
   headerElement = document.getElementById('store-detail-header');
   bodyElement = document.getElementById('store-detail-body');
+  onReportPriceCallback = onReportPrice;
 
   // Close on overlay click
   modalOverlay?.addEventListener('click', (e) => {
     if (e.target === modalOverlay) {
-      closeModal();
+      closeStoreDetail();
     }
   });
 
   // Escape key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modalOverlay?.classList.contains('modal-overlay--visible')) {
-      closeModal();
+      closeStoreDetail();
     }
   });
 }
 
-export function openStoreDetail(store) {
+export async function openStoreDetail(store) {
   if (!modalOverlay || !store) return;
 
   currentStore = store;
   activeTab = 'prices';
+  cachedPrices = [];
 
   renderHeader();
+
+  // Fetch prices from API first, fallback to mock
+  try {
+    const response = await fetchPrices({ storeId: store.id });
+    cachedPrices = response.data || response || [];
+  } catch (error) {
+    console.warn('Failed to fetch prices from API, using mock:', error);
+    cachedPrices = getStorePrices(store.id);
+  }
+
   renderBody();
 
   modalOverlay.classList.add('modal-overlay--visible');
 }
 
-function closeModal() {
+export function closeStoreDetail() {
   modalOverlay?.classList.remove('modal-overlay--visible');
 }
 
@@ -81,7 +96,7 @@ function renderHeader() {
 function renderBody() {
   if (!bodyElement || !currentStore) return;
 
-  const prices = getStorePrices(currentStore.id);
+  const prices = cachedPrices;
 
   bodyElement.innerHTML = `
     <div style="margin-bottom: var(--space-4);">
@@ -150,6 +165,14 @@ function renderBody() {
       }
     });
   });
+
+  // Report button handler
+  const reportBtn = bodyElement.querySelector('#report-from-detail');
+  if (reportBtn && onReportPriceCallback) {
+    reportBtn.addEventListener('click', () => {
+      onReportPriceCallback(currentStore);
+    });
+  }
 }
 
 function renderPricesTab(prices) {
@@ -165,7 +188,7 @@ function renderPricesTab(prices) {
   return `
     <div style="display: flex; flex-direction: column; gap: var(--space-3);">
       ${prices.map(price => {
-    const freshness = getFreshnessBadge(price.timestamp);
+    const freshness = getFreshnessBadge(price.timestamp || price.createdAt);
     return `
           <div class="price-card" data-price-id="${price.id}">
             <div class="price-card__content" style="flex: 1;">
@@ -183,7 +206,7 @@ function renderPricesTab(prices) {
                 ` : ''}
               </div>
               <div class="text-xs text-muted" style="margin-top: var(--space-1);">
-                por ${price.reporter} • ${formatTimeAgo(price.timestamp)}
+                por ${price.reporter?.name || price.reporter || 'Anônimo'} • ${formatTimeAgo(price.timestamp || price.createdAt)}
               </div>
             </div>
             <div class="price-card__actions">

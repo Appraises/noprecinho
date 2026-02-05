@@ -20,13 +20,13 @@
 /* Mobile */
 @media (max-width: 768px) {
     :root {
-        --header-height: 64px;
+        --header-height: 56px;
         --font-size-base: 15px;
     }
 
     .header {
         padding: 0 var(--space-3);
-        gap: var(--space-3);
+        gap: var(--space-2);
     }
 
     .header__logo-text {
@@ -42,28 +42,70 @@
         display: none;
     }
 
+    /* Compact filter bar - horizontal scroll */
     .filter-bar {
         padding: var(--space-2) var(--space-3);
+        gap: var(--space-2);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
     }
 
-    /* Hide side panel, use bottom sheet */
+    .filter-bar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .filter-bar .chip {
+        flex-shrink: 0;
+        padding: var(--space-1) var(--space-3);
+        font-size: var(--font-size-xs);
+    }
+
+    /* Hide side panel completely on mobile */
     .side-panel {
         display: none;
     }
 
-    /* Store preview as bottom sheet */
+    /* Store preview as bottom sheet - HIDDEN by default */
     .store-preview {
-        bottom: 0;
+        position: fixed;
+        top: auto;
         left: 0;
         right: 0;
-        transform: none;
+        bottom: 0;
         width: 100%;
-        max-width: none;
+        height: auto;
+        max-height: 40vh;
+        transform: translateY(100%);
+        /* Hidden off-screen */
         border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
-        max-height: 50vh;
+        border-right: none;
+        border-top: 1px solid var(--color-border);
+        transition: transform var(--transition-normal);
+        z-index: var(--z-sticky);
     }
 
-    /* Floating controls */
+    /* Only show when --visible class is added */
+    .store-preview--visible {
+        transform: translateY(0);
+    }
+
+    .store-preview--hidden {
+        transform: translateY(100%);
+    }
+
+    .store-preview__header {
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .store-preview__footer {
+        padding: var(--space-3) var(--space-4);
+        padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+        flex-direction: row;
+        align-items: center;
+    }
+
+    /* Floating controls - adjusted for mobile */
     .floating-controls {
         bottom: var(--space-4);
         right: var(--space-4);

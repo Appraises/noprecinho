@@ -24,9 +24,9 @@ import { formatDistance, getCategoryIcon, getCategoryLabel } from './js/utils/fo
 import { initFilters, getActiveCategories } from './js/ui/filters.js';
 import { initStorePreview, showStorePreview, hideStorePreview } from './js/ui/storePreview.js';
 import { initPricePanel, updatePriceList } from './js/ui/priceList.js';
-import { initReportModal, openReportModal } from './js/ui/reportModal.js';
+import { initReportModal, openReportModal, setStores } from './js/ui/reportModal.js';
 import { initFilterModal, openFilterModal } from './js/ui/filterModal.js';
-import { initStoreDetail, openStoreDetail } from './js/ui/storeDetail.js';
+import { initStoreDetail, openStoreDetail, closeStoreDetail } from './js/ui/storeDetail.js';
 import { showToast } from './js/ui/toast.js';
 import { initProofViewer, attachProofViewers } from './js/ui/proofViewer.js';
 import { initLoadingUI, showError, createSkeletonCards, createEmptyState, isAppOffline } from './js/ui/loadingUI.js';
@@ -172,7 +172,10 @@ async function init() {
   initPricePanel();
   initReportModal(handlePriceReport);
   initFilterModal(handleFilterApply);
-  initStoreDetail();
+  initStoreDetail((store) => {
+    closeStoreDetail();
+    openReportModal(store);
+  });
 
   // Initialize left sidebar with store highlight and location callbacks
   initLeftSidebar({
@@ -334,6 +337,7 @@ async function refreshData() {
 
       appState.stores = stores;
       appState.prices = prices;
+      if (appState.stores) setStores(appState.stores);
 
       // Update map markers
       addStoreMarkers(appState.mapInstance, stores, handleStoreClick);
@@ -353,6 +357,7 @@ async function refreshData() {
 
       appState.stores = nearbyStores;
       appState.prices = filteredPrices;
+      if (appState.stores) setStores(appState.stores);
 
       // Update map markers
       addStoreMarkers(appState.mapInstance, mockStores, handleStoreClick);
@@ -410,15 +415,20 @@ async function handlePriceReport(reportData) {
   console.log('New price reported:', reportData);
 
   try {
-    if (appState.useApi && !isAppOffline()) {
+    if (appState.useApi) { // Check API mode
       // Submit to API
-      await submitPrice({
+      console.log('Submitting to API...');
+
+      const payload = {
         storeId: reportData.storeId,
         product: reportData.product,
         price: reportData.price,
         unit: reportData.unit || 'un',
-        hasPhoto: !!reportData.photo
-      });
+        hasPhoto: reportData.hasPhoto,
+        photoUrl: reportData.photoFile // Send the base64 string
+      };
+
+      await submitPrice(payload);
 
       showToast('success', '+15 pontos!', 'Preço enviado com sucesso');
     } else {
@@ -427,9 +437,11 @@ async function handlePriceReport(reportData) {
       showToast('success', '+5 pontos!', 'Preço salvo localmente');
     }
   } catch (error) {
-    console.error('Error submitting price:', error);
-    showError('Erro ao enviar preço. Salvo localmente.');
-    addPoints(5);
+    console.error('Error submitting price detailed:', error);
+    // Show specific error if available
+    const msg = error.message || 'Erro ao enviar preço. Salvo localmente.';
+    showError(msg);
+    if (!appState.useApi) addPoints(5);
   }
 
   updatePointsDisplay();

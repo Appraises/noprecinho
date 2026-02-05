@@ -1,8 +1,10 @@
 // Report price modal - Receipt-first with auto-extract
-import { stores, products, addPrice, searchProducts } from '../data/mockData.js';
+import { products, addPrice, searchProducts } from '../data/mockData.js';
+import { stores as mockStores } from '../data/mockData.js';
 import { formatPrice, getCategoryIcon, getCategoryLabel } from '../utils/formatters.js';
 import { extractPriceFromImage, compressImage, blurSensitiveAreas } from '../utils/imageUtils.js';
 
+let stores = [...mockStores]; // Initialize with mock, but allow override
 let modalOverlay = null;
 let modalBody = null;
 let modalFooter = null;
@@ -24,6 +26,10 @@ let manualData = {
 };
 let onSubmitCallback = null;
 
+export function setStores(newStores) {
+  stores = newStores;
+}
+
 export function initReportModal(onSubmit) {
   modalOverlay = document.getElementById('report-modal');
   modalBody = document.getElementById('modal-body');
@@ -42,7 +48,8 @@ export function openReportModal(preselectedStore = null) {
 
   // Reset state
   currentMode = preselectedStore ? 'manual' : 'choose';
-  currentStep = 1;
+  // Skip store selection if store is pre-selected
+  currentStep = preselectedStore ? 2 : 1;
   receiptData = { image: null, store: null, items: [], selectedItems: [] };
   manualData = {
     storeId: preselectedStore?.id || null,
@@ -665,10 +672,7 @@ function handleSubmit() {
     });
 
     if (onSubmitCallback) {
-      onSubmitCallback({
-        type: 'manual',
-        data: manualData
-      });
+      onSubmitCallback(manualData);
     }
   }
 

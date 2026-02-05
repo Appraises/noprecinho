@@ -48,16 +48,38 @@
 }
 
 /* Attribution */
+/* Attribution */
 .leaflet-control-attribution {
-    background: rgba(22, 27, 34, 0.9) !important;
+    background: rgba(255, 255, 255, 0.4) !important;
+    backdrop-filter: blur(4px);
     color: var(--color-text-muted) !important;
-    padding: var(--space-1) var(--space-2) !important;
-    font-size: var(--font-size-xs) !important;
+    padding: 0 var(--space-1) !important;
+    font-size: 10px !important;
+    line-height: 1.2 !important;
     border-radius: var(--radius-sm) !important;
+    opacity: 0.6;
+    transition: opacity var(--transition-fast);
+    pointer-events: auto;
+    margin-right: 4px !important;
+    margin-bottom: 4px !important;
+}
+
+.leaflet-control-attribution:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.9) !important;
 }
 
 .leaflet-control-attribution a {
-    color: var(--color-primary) !important;
+    color: currentColor !important;
+    text-decoration: none !important;
+}
+
+[data-theme="dark"] .leaflet-control-attribution {
+    background: rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .leaflet-control-attribution:hover {
+    background: rgba(0, 0, 0, 0.8) !important;
 }
 
 /* Map tiles - remove legacy invert filter since we use native dark tiles */

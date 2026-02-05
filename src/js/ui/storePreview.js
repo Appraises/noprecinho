@@ -52,6 +52,7 @@ export function showStorePreview(store) {
 
     // Show panel
     previewElement.classList.remove('store-preview--hidden');
+    previewElement.classList.add('store-preview--visible');
 
     try {
         const setContent = (id, text) => {
@@ -79,6 +80,7 @@ export function showStorePreview(store) {
 
 export function hideStorePreview() {
     if (!previewElement) return;
+    previewElement.classList.remove('store-preview--visible');
     previewElement.classList.add('store-preview--hidden');
 }
 
