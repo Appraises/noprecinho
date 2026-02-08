@@ -272,31 +272,62 @@ function extractReceiptItems(text) {
                 .trim();
         }
 
-        // Clean up common receipt noise
-        // Remove leading item/line numbers (e.g. "001", "003")
+        // =============================================
+        // CLEAN UP PRODUCT NAME - Brazilian Receipt Format
+        // =============================================
+
+        // Step 1: Remove leading item/line numbers (e.g. "001", "003")
         productName = productName.replace(/^[\dOo]{1,4}\s+/, '');
 
-        // Remove product codes (e.g. "08871124", "U735J74Z")
+        // Step 2: Remove product codes (e.g. "08871124", "U735J74Z")
         productName = productName.replace(/^[A-Z\d]{6,}\s+/i, '');
 
-        // Remove unit codes at end (e.g. "Jun FL", "u( Fi", "Au FE")
-        productName = productName.replace(/\s+(?:[Jj]un|[Aa]u|[Uu]n|[Ii]n)\s*(?:FL?|Fi?|FE?)?\s*$/i, '');
-        productName = productName.replace(/\s+[uU]\(?\s*[Ff][iIeE]?\s*$/i, '');
-        productName = productName.replace(/\s+[Aa]\s*dls\s*$/i, '');
+        // Step 3: Extract quantity from patterns like "1un", "2un", "3un" before removing
+        let quantity = 1;
+        let unitPrice = priceFound;
 
-        // Remove stray parentheses and brackets
-        productName = productName.replace(/[\(\)\[\]]/g, '').trim();
+        // Match quantity at end: "1un", "2un", "1 un", etc.
+        const qtyPatternEnd = /\s+(\d+)\s*(?:un|UN|[Uu][Nn])(?:\s*[Ff][1IiEe]?)?\s*$/;
+        const qtyMatchEnd = productName.match(qtyPatternEnd);
+        if (qtyMatchEnd) {
+            quantity = parseInt(qtyMatchEnd[1]);
+            productName = productName.replace(qtyPatternEnd, '').trim();
+        }
 
-        // Remove percentage patterns (tax indicators)
-        productName = productName.replace(/\s*[A-Z]?\d{1,2}[.,]\d{2}%\s*/g, ' ').trim();
+        // Match quantity from original line if not found (check before product name)
+        if (quantity === 1) {
+            const qtyMatchLine = cleanLine.match(/\s+(\d+)\s*(?:un|UN|[Uu][Nn])\s+/);
+            if (qtyMatchLine) {
+                quantity = parseInt(qtyMatchLine[1]);
+            }
+        }
 
-        // Remove codes in parentheses like (12345)
-        productName = productName.replace(/\(\d+\)/g, '').trim();
+        // Calculate unit price if quantity > 1
+        if (quantity > 1) {
+            unitPrice = Math.round((priceFound / quantity) * 100) / 100;
+        }
 
-        // Clean multiple spaces
-        productName = productName.replace(/\s+/g, ' ').trim();
+        // Step 4: Remove remaining unit/tax indicators from product name
+        // Patterns: "1un", "Jun", "lun", "iun", "F1", "Fi", "FE", "T19,00%", etc.
+        productName = productName
+            // Remove quantity units (1un, 2un, lun, Jun, iun, etc.)
+            .replace(/\s*\d*\s*(?:[JjLlIi1]?[Uu][Nn]|[Uu][Nn])\s*/gi, ' ')
+            // Remove F1, Fi, FE tax codes
+            .replace(/\s*[Ff][1IiEe]?\s*$/g, '')
+            .replace(/\s+[Ff][1IiEe]\s+/g, ' ')
+            // Remove tax percentages like T19,00%
+            .replace(/\s*[A-Z]?\d{1,2}[.,]\d{2}%\s*/g, ' ')
+            // Remove trailing letters that are common noise (A, Fe, etc.)
+            .replace(/\s+[A-Z]{1,2}$/g, '')
+            // Remove stray parentheses and brackets
+            .replace(/[\(\)\[\]]/g, '')
+            // Remove codes in parentheses like (12345)
+            .replace(/\(\d+\)/g, '')
+            // Clean multiple spaces
+            .replace(/\s+/g, ' ')
+            .trim();
 
-        // Final cleanup: remove any remaining leading numbers
+        // Step 5: Final cleanup - remove any remaining leading numbers
         productName = productName.replace(/^\d+\s+/, '');
 
         // If name is too short after cleaning, skip
@@ -304,23 +335,16 @@ function extractReceiptItems(text) {
 
         // Normalize and check for duplicates
         const normalizedName = productName.toUpperCase();
-        const duplicateKey = `${normalizedName}_${priceFound.toFixed(2)}`;
+        const duplicateKey = `${normalizedName}_${unitPrice.toFixed(2)}`;
         if (seenProducts.has(duplicateKey)) return;
         seenProducts.add(duplicateKey);
 
-        // Extract quantity if present
-        let quantity = 1;
-        const qtyMatch = productName.match(/^(\d+)\s*[xX]\s+/);
-        if (qtyMatch) {
-            quantity = parseInt(qtyMatch[1]);
-            productName = productName.replace(qtyMatch[0], '').trim();
-        }
-
         items.push({
             product: productName,
-            price: priceFound,
+            price: unitPrice,           // Unit price (total / quantity)
+            totalPrice: priceFound,     // Original price from receipt
             quantity: quantity,
-            confidence: 0.85 // Higher confidence with improved parsing
+            confidence: quantity > 1 ? 0.90 : 0.85 // Higher if we detected quantity
         });
     });
 
