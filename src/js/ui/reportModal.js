@@ -30,6 +30,71 @@ export function setStores(newStores) {
   stores = newStores;
 }
 
+// Filter stores by location and sort by distance
+function filterStoresByLocation(lat, lon) {
+  // Calculate distance for each store
+  const storesWithDistance = stores.map(store => {
+    const distance = calculateDistance(lat, lon, store.lat, store.lng);
+    return { ...store, distance };
+  });
+
+  // Sort by distance and filter to nearby (within 10km)
+  const nearbyStores = storesWithDistance
+    .filter(s => s.distance <= 10000)
+    .sort((a, b) => a.distance - b.distance);
+
+  // Update the store list in the DOM
+  const storeList = document.getElementById('store-list');
+  if (storeList) {
+    if (nearbyStores.length > 0) {
+      storeList.innerHTML = nearbyStores.slice(0, 15).map(store => `
+        <div class="price-card ${store.id === manualData.storeId ? 'selected' : ''}" data-store-id="${store.id}">
+          <div class="price-card__image">${getCategoryIcon(store.category)}</div>
+          <div class="flex-1 min-w-0">
+            <div class="price-card__product truncate">${store.name}</div>
+            <div class="price-card__store truncate">${store.address}</div>
+            <div class="text-xs text-muted">${formatDistance(store.distance)}</div>
+          </div>
+          ${store.id === manualData.storeId ? '<div class="check-icon">✓</div>' : ''}
+        </div>
+      `).join('');
+    } else {
+      storeList.innerHTML = `
+        <div class="text-center py-6 text-muted">
+          <div class="text-2xl mb-2">🏪</div>
+          <p>Nenhuma loja encontrada nesta área.</p>
+        </div>
+      `;
+    }
+
+    // Re-attach click handlers
+    storeList.querySelectorAll('.price-card').forEach(card => {
+      card.addEventListener('click', () => {
+        manualData.storeId = card.dataset.storeId;
+        storeList.querySelectorAll('.price-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        setTimeout(() => handleNext(), 200);
+      });
+    });
+  }
+}
+
+// Haversine formula to calculate distance between two coordinates
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Earth radius in meters
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
 export function initReportModal(onSubmit) {
   modalOverlay = document.getElementById('report-modal');
   modalBody = document.getElementById('modal-body');
@@ -285,12 +350,14 @@ function renderManualMode() {
 }
 
 function renderManualStore() {
-  const nearbyStores = stores.slice(0, 8); // Show more stores
+  const nearbyStores = stores.slice(0, 10); // Show more stores
+  const userCity = window.userCity || '';
 
   return `
     <div class="report-section-header">
         <h3 class="report-section-title">Qual é a loja?</h3>
         <p class="report-section-subtitle">Selecione onde você viu o preço</p>
+        ${userCity ? `<div class="city-badge">📍 ${userCity}</div>` : ''}
     </div>
 
     <div class="form-group store-search-container">
@@ -298,20 +365,41 @@ function renderManualStore() {
       <input type="text" class="form-input search-input" id="store-search" placeholder="Buscar loja por nome..."/>
     </div>
     
+    <div class="form-group store-search-container">
+      <span class="search-icon">📍</span>
+      <input type="text" class="form-input search-input" id="address-search" placeholder="Buscar por endereço (rua, bairro)..."/>
+      <div id="address-suggestions" class="search-suggestions hidden"></div>
+    </div>
+    
     <div id="store-list" class="store-list custom-scrollbar">
-      ${nearbyStores.map(store => `
+      ${nearbyStores.length > 0 ? nearbyStores.map(store => `
         <div class="price-card ${store.id === manualData.storeId ? 'selected' : ''}" data-store-id="${store.id}">
           <div class="price-card__image">${getCategoryIcon(store.category)}</div>
           <div class="flex-1 min-w-0">
             <div class="price-card__product truncate">${store.name}</div>
             <div class="price-card__store truncate">${store.address}</div>
+            ${store.distance ? `<div class="text-xs text-muted">${formatDistance(store.distance)}</div>` : ''}
           </div>
           ${store.id === manualData.storeId ? '<div class="check-icon">✓</div>' : ''}
         </div>
-      `).join('')}
+      `).join('') : `
+        <div class="text-center py-6 text-muted">
+          <div class="text-2xl mb-2">🏪</div>
+          <p>Nenhuma loja encontrada na sua cidade.</p>
+          <p class="text-xs mt-1">Tente buscar por endereço acima.</p>
+        </div>
+      `}
     </div>
     <p class="form-error hidden text-center" id="store-error">Por favor, selecione uma loja para continuar</p>
   `;
+}
+
+// Helper to format distance
+function formatDistance(meters) {
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  }
+  return `${(meters / 1000).toFixed(1).replace('.', ',')} km`;
 }
 
 function renderManualProduct() {
@@ -508,7 +596,7 @@ function attachHandlers() {
     });
   });
 
-  // Store search
+  // Store search (by name)
   document.getElementById('store-search')?.addEventListener('input', (e) => {
     const q = e.target.value.toLowerCase();
     document.querySelectorAll('#store-list .price-card').forEach(card => {
@@ -516,6 +604,56 @@ function attachHandlers() {
       const matches = store && (store.name.toLowerCase().includes(q) || store.address.toLowerCase().includes(q));
       card.style.display = matches || !q ? '' : 'none';
     });
+  });
+
+  // Address search (geocoding)
+  let addressSearchTimeout = null;
+  document.getElementById('address-search')?.addEventListener('input', (e) => {
+    const q = e.target.value.trim();
+    const suggestionsDiv = document.getElementById('address-suggestions');
+
+    // Clear previous timeout
+    if (addressSearchTimeout) clearTimeout(addressSearchTimeout);
+
+    if (q.length < 3) {
+      if (suggestionsDiv) suggestionsDiv.classList.add('hidden');
+      return;
+    }
+
+    // Debounce the search
+    addressSearchTimeout = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=br&limit=5`
+        );
+        const results = await response.json();
+
+        if (results.length > 0 && suggestionsDiv) {
+          suggestionsDiv.innerHTML = results.map(r => `
+            <div class="search-suggestion" data-lat="${r.lat}" data-lon="${r.lon}">
+              <span class="search-suggestion__icon">📍</span>
+              <span class="search-suggestion__text">${r.display_name.substring(0, 60)}${r.display_name.length > 60 ? '...' : ''}</span>
+            </div>
+          `).join('');
+          suggestionsDiv.classList.remove('hidden');
+
+          // Add click handlers to suggestions
+          suggestionsDiv.querySelectorAll('.search-suggestion').forEach(sug => {
+            sug.addEventListener('click', () => {
+              const lat = parseFloat(sug.dataset.lat);
+              const lon = parseFloat(sug.dataset.lon);
+              filterStoresByLocation(lat, lon);
+              suggestionsDiv.classList.add('hidden');
+              e.target.value = sug.querySelector('.search-suggestion__text')?.textContent || q;
+            });
+          });
+        } else if (suggestionsDiv) {
+          suggestionsDiv.classList.add('hidden');
+        }
+      } catch (error) {
+        console.error('Address search error:', error);
+      }
+    }, 400);
   });
 
   // Product input
