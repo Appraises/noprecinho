@@ -81,7 +81,8 @@ async function loadChartData(productName, storeId, days) {
         const params = new URLSearchParams({ product: productName, days: days.toString() });
         if (storeId) params.set('storeId', storeId);
 
-        const response = await fetch(`http://localhost:3000/api/price-history?${params}`);
+        const apiBase = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000`;
+        const response = await fetch(`${apiBase}/api/price-history?${params}`);
         const data = await response.json();
 
         if (!data.chartData || data.chartData.length === 0) {

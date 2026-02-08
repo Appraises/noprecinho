@@ -7,7 +7,9 @@ const TOKEN_KEY = 'precoja_auth_token';
 const USER_KEY = 'precoja_user';
 
 // API base URL - change for production
-const API_BASE = `http://${window.location.hostname}:3000/api`;
+const API_BASE = import.meta.env.VITE_API_URL
+    ? `${import.meta.env.VITE_API_URL}/api`
+    : `http://${window.location.hostname}:3000/api`;
 
 export const auth = {
     /**

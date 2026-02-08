@@ -4,7 +4,9 @@
 
 import { auth } from './auth.js';
 
-const API_BASE = `http://${window.location.hostname}:3000/api`;
+const API_BASE = import.meta.env.VITE_API_URL
+    ? `${import.meta.env.VITE_API_URL}/api`
+    : `http://${window.location.hostname}:3000/api`;
 
 /**
  * Make an authenticated API request
