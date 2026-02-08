@@ -133,8 +133,12 @@ async function tryBackendOCR(file, onProgress) {
         // Import API module dynamically to avoid circular deps
         const { processReceiptOCR, checkOCRStatus } = await import('../api.js');
 
+        console.log('🔍 Checking backend OCR availability...');
+
         // Check if backend OCR is available
         const status = await checkOCRStatus();
+        console.log('📡 OCR Status:', status);
+
         if (!status.available) {
             console.log('⚠️ Backend OCR not available, will use Tesseract');
             return null;
@@ -143,22 +147,34 @@ async function tryBackendOCR(file, onProgress) {
         if (onProgress) onProgress(0.1);
 
         // Convert file to base64
+        console.log('📦 Converting image to base64...');
         const base64 = await fileToBase64(file);
+        console.log('📦 Base64 size:', Math.round(base64.length / 1024), 'KB');
 
         if (onProgress) onProgress(0.3);
 
         // Call backend OCR
+        console.log('☁️ Calling Google Cloud Vision API...');
         const result = await processReceiptOCR(base64);
+        console.log('📥 Backend OCR result:', result);
 
         if (onProgress) onProgress(1);
 
         if (!result.success) {
-            console.warn('⚠️ Backend OCR failed:', result.error);
+            console.warn('⚠️ Backend OCR returned error:', result.error);
+            return null;
+        }
+
+        // Check if we got any items
+        if (!result.items || result.items.length === 0) {
+            console.warn('⚠️ Backend OCR returned no items, falling back to Tesseract');
             return null;
         }
 
         // Parse store info from raw text
-        const storeInfo = extractStoreFromText(result.rawText);
+        const storeInfo = extractStoreFromText(result.rawText || '');
+
+        console.log(`✅ Google Vision extracted ${result.items.length} items`);
 
         return {
             success: true,
@@ -175,7 +191,8 @@ async function tryBackendOCR(file, onProgress) {
         };
 
     } catch (error) {
-        console.warn('⚠️ Backend OCR error, falling back to Tesseract:', error.message);
+        console.error('❌ Backend OCR error:', error);
+        console.log('⚠️ Falling back to Tesseract.js...');
         return null;
     }
 }
