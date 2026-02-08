@@ -16,6 +16,13 @@ export function initStorePreview(onDetailsClick) {
         }
     });
 
+    // Close button
+    const closeBtn = document.getElementById('preview-close');
+    closeBtn?.addEventListener('click', () => {
+        hideStorePreview();
+    });
+
+
     // Drag handle for mobile
     const dragHandle = previewElement?.querySelector('.store-preview__drag-handle');
     if (dragHandle) {

@@ -303,12 +303,31 @@ function renderHistoryTab() {
 }
 
 function handleVote(priceId, isUpvote, button) {
-  const updatedPrice = votePrice(priceId, isUpvote);
+  const card = button.closest('.price-card');
+  const upBtn = card.querySelector('.vote-btn--up');
+  const downBtn = card.querySelector('.vote-btn--down');
 
+  // Check if this button is already active (toggle off)
+  if (button.classList.contains('vote-btn--active')) {
+    button.classList.remove('vote-btn--active');
+    // Optionally call API to remove vote
+    return;
+  }
+
+  // Remove active state from the other button (mutual exclusivity)
+  if (isUpvote) {
+    downBtn?.classList.remove('vote-btn--active');
+  } else {
+    upBtn?.classList.remove('vote-btn--active');
+  }
+
+  // Add active state to clicked button
   button.classList.add('vote-btn--active');
 
+  // Call the vote API
+  const updatedPrice = votePrice(priceId, isUpvote);
+
   // Update count
-  const card = button.closest('.price-card');
   const countEl = card.querySelector('.price-card__actions .text-xs');
   if (countEl && updatedPrice) {
     countEl.textContent = updatedPrice.votes.toString();
