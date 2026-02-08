@@ -193,39 +193,80 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Loja não encontrada' });
         }
 
-        const newPrice = await prisma.price.create({
-            data: {
-                product: product.trim(),
-                price: parseFloat(price),
-                unit: unit.trim(),
-                hasPhoto: hasPhoto === true,
-                photoUrl: photoUrl || null,
+        // Check if price already exists for this product in this store
+        const existingPrice = await prisma.price.findFirst({
+            where: {
                 storeId,
-                reporterId: req.userId!,
-            },
-            include: {
-                store: {
-                    select: { id: true, name: true, category: true },
-                },
-                reporter: {
-                    select: { id: true, name: true, avatar: true },
-                },
-            },
+                product: {
+                    equals: product.trim(),
+                    mode: 'insensitive'
+                }
+            }
         });
 
-        // Award points and increment report count
+        let resultPrice;
+        let isUpdate = false;
+
+        if (existingPrice) {
+            // Update existing price
+            resultPrice = await prisma.price.update({
+                where: { id: existingPrice.id },
+                data: {
+                    price: parseFloat(price),
+                    unit: unit.trim(),
+                    hasPhoto: hasPhoto === true,
+                    photoUrl: photoUrl || existingPrice.photoUrl,
+                    reporterId: req.userId!,
+                    updatedAt: new Date(),
+                },
+                include: {
+                    store: {
+                        select: { id: true, name: true, category: true },
+                    },
+                    reporter: {
+                        select: { id: true, name: true, avatar: true },
+                    },
+                },
+            });
+            isUpdate = true;
+        } else {
+            // Create new price
+            resultPrice = await prisma.price.create({
+                data: {
+                    product: product.trim(),
+                    price: parseFloat(price),
+                    unit: unit.trim(),
+                    hasPhoto: hasPhoto === true,
+                    photoUrl: photoUrl || null,
+                    storeId,
+                    reporterId: req.userId!,
+                },
+                include: {
+                    store: {
+                        select: { id: true, name: true, category: true },
+                    },
+                    reporter: {
+                        select: { id: true, name: true, avatar: true },
+                    },
+                },
+            });
+        }
+
+        // Award points and increment report count (less points for updates)
         await prisma.user.update({
             where: { id: req.userId },
             data: {
-                points: { increment: hasPhoto ? 15 : 10 },
-                priceReportsCount: { increment: 1 }
+                points: { increment: isUpdate ? 5 : (hasPhoto ? 15 : 10) },
+                priceReportsCount: { increment: isUpdate ? 0 : 1 }
             },
         });
 
-        return res.status(201).json({
-            ...newPrice,
+
+        return res.status(isUpdate ? 200 : 201).json({
+            ...resultPrice,
             freshness: 'fresh',
-            daysSinceUpdate: 0
+            daysSinceUpdate: 0,
+            wasUpdated: isUpdate
         });
     } catch (error) {
         console.error('Create price error:', error);
