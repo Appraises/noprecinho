@@ -4,9 +4,9 @@ import { optionalAuthMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
-// Default pagination settings
-const DEFAULT_PAGE_SIZE = 50;
-const MAX_PAGE_SIZE = 200;
+// Default pagination settings - increased for map display
+const DEFAULT_PAGE_SIZE = 5000;
+const MAX_PAGE_SIZE = 20000;
 
 // Helper: Check if store is currently open
 function isStoreOpenNow(openingHours: string | null): boolean {
