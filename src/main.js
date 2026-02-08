@@ -500,13 +500,8 @@ function setupEventListeners(map) {
     }
   });
 
-  // Shopping list button (floating)
+  // Shopping list button (floating) - opens left sidebar (same as CTRL+L)
   document.getElementById('shopping-list-btn')?.addEventListener('click', () => {
-    toggleShoppingPanel();
-  });
-
-  // Left sidebar toggle (header button)
-  document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
     toggleLeftSidebar();
   });
 
