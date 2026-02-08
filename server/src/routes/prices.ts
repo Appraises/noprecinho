@@ -261,6 +261,20 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
             },
         });
 
+        // Record to price history for charts and trends
+        try {
+            await prisma.priceHistory.create({
+                data: {
+                    productName: product.trim(),
+                    storeId: storeId,
+                    price: parseFloat(price),
+                    productId: null // Could link to product catalog if available
+                }
+            });
+        } catch (historyError) {
+            // Don't fail the request if history recording fails
+            console.error('Failed to record price history:', historyError);
+        }
 
         return res.status(isUpdate ? 200 : 201).json({
             ...resultPrice,
