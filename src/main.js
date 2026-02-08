@@ -68,8 +68,26 @@ const appState = {
   prices: [],        // Current prices data
   useApi: false,     // Whether API is available
   isLoading: false,  // Global loading state
-  mapInstance: null
+  mapInstance: null,
+  // Current product search state
+  currentSearch: {
+    product: null,         // Product name being searched
+    prices: [],            // Prices for this product
+    stores: []             // Stores that have this product
+  }
 };
+
+// Calculate distance between two points (Haversine formula)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 // Initialize the application
 async function init() {
@@ -303,8 +321,18 @@ async function searchForProduct(productName) {
     // Update price list with search results (sorted by price)
     updatePriceList(sortedPrices, handlePriceCardClick);
 
-    // Store current search
-    appState.currentSearch = productName;
+    // Store current search state for filter re-application
+    appState.currentSearch = {
+      product: productName,
+      prices: sortedPrices,
+      stores: storesWithProduct
+    };
+
+    // Update search input to show selected product
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+      searchInput.value = productName;
+    }
 
   } catch (error) {
     console.error('Search error:', error);
@@ -315,7 +343,11 @@ async function searchForProduct(productName) {
 
 // Clear search and show all stores
 function clearProductSearch() {
-  appState.currentSearch = null;
+  appState.currentSearch = {
+    product: null,
+    prices: [],
+    stores: []
+  };
   const searchInput = document.getElementById('search-input');
   if (searchInput) searchInput.value = '';
   refreshData();
@@ -468,7 +500,74 @@ async function handlePriceReport(reportData) {
 
 function handleFilterApply(settings) {
   appState.filterSettings = { ...appState.filterSettings, ...settings };
-  refreshData();
+
+  // If there's an active product search, re-apply filters to those results
+  if (appState.currentSearch.product && appState.currentSearch.prices.length > 0) {
+    let filteredPrices = [...appState.currentSearch.prices];
+    let filteredStores = [...appState.currentSearch.stores];
+
+    // Apply distance filter if user location is available
+    if (appState.userLocation && settings.radius) {
+      filteredStores = filteredStores.filter(store => {
+        if (!store.lat || !store.lng) return true;
+        const distance = calculateDistance(
+          appState.userLocation.lat, appState.userLocation.lng,
+          store.lat, store.lng
+        );
+        return distance <= settings.radius;
+      });
+
+      // Filter prices to only include stores within radius
+      const storeIds = filteredStores.map(s => s.id);
+      filteredPrices = filteredPrices.filter(p => {
+        const storeId = p.store?.id || p.storeId;
+        return storeIds.includes(storeId);
+      });
+    }
+
+    // Sort based on user selection
+    if (settings.sortBy === 'distance' && appState.userLocation) {
+      filteredPrices.sort((a, b) => {
+        const storeA = filteredStores.find(s => s.id === (a.store?.id || a.storeId));
+        const storeB = filteredStores.find(s => s.id === (b.store?.id || b.storeId));
+        if (!storeA || !storeB) return 0;
+        const distA = calculateDistance(appState.userLocation.lat, appState.userLocation.lng, storeA.lat, storeA.lng);
+        const distB = calculateDistance(appState.userLocation.lat, appState.userLocation.lng, storeB.lat, storeB.lng);
+        return distA - distB;
+      });
+    } else {
+      // Default: sort by price
+      filteredPrices.sort((a, b) => a.price - b.price);
+    }
+
+    // Update map with filtered stores
+    if (filteredStores.length > 0) {
+      addStoreMarkers(appState.mapInstance, filteredStores, handleStoreClick);
+
+      // Navigate to the best result (first after sorting)
+      const bestPrice = filteredPrices[0];
+      const bestStoreId = bestPrice?.store?.id || bestPrice?.storeId;
+      const bestStore = filteredStores.find(s => s.id === bestStoreId);
+
+      if (bestStore && bestStore.lat && bestStore.lng) {
+        appState.mapInstance.setView([bestStore.lat, bestStore.lng], 14);
+        appState.selectedStore = bestStore;
+        selectStore(bestStore.id);
+        showStorePreview(bestStore);
+
+        showToast('success', 'Filtros aplicados',
+          `${filteredPrices.length} resultado(s) em ${filteredStores.length} loja(s)`);
+      }
+    } else {
+      showToast('warning', 'Nenhum resultado', 'Nenhuma loja encontrada com os filtros selecionados');
+    }
+
+    // Update price list
+    updatePriceList(filteredPrices, handlePriceCardClick);
+  } else {
+    // No active search, refresh all data
+    refreshData();
+  }
 }
 
 function updatePointsDisplay() {
