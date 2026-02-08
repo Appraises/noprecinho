@@ -242,8 +242,8 @@ async function searchForProduct(productName) {
   showToast('info', `Buscando "${productName}"...`);
 
   try {
-    // Fetch prices for this product
-    const pricesResponse = await fetchPrices({ product: productName });
+    // Fetch prices for this product, sorted by price ascending
+    const pricesResponse = await fetchPrices({ product: productName, sortBy: 'price' });
     const prices = pricesResponse.data || pricesResponse;
 
     if (!prices || prices.length === 0) {
@@ -261,30 +261,47 @@ async function searchForProduct(productName) {
       return;
     }
 
+    // Sort prices by value to find the cheapest
+    const sortedPrices = [...prices].sort((a, b) => a.price - b.price);
+    const cheapestPrice = sortedPrices[0];
+    const cheapestStoreId = cheapestPrice.store?.id || cheapestPrice.storeId;
+
     // Get unique store IDs from prices
     const storeIdsWithProduct = [...new Set(prices.map(p => p.store?.id || p.storeId).filter(Boolean))];
 
     // Filter stores to only those with this product
     const storesWithProduct = appState.stores.filter(s => storeIdsWithProduct.includes(s.id));
 
+    // Find the cheapest store
+    const cheapestStore = storesWithProduct.find(s => s.id === cheapestStoreId)
+      || (cheapestPrice.store ? { ...cheapestPrice.store, lat: cheapestPrice.store.lat, lng: cheapestPrice.store.lng } : null);
+
     // Update map to highlight only stores with this product
     if (storesWithProduct.length > 0) {
       // Add markers for filtered stores with price info
       addStoreMarkers(appState.mapInstance, storesWithProduct, handleStoreClick);
 
-      // Zoom to fit all stores with this product
-      if (storesWithProduct.length === 1) {
-        appState.mapInstance.setView([storesWithProduct[0].lat, storesWithProduct[0].lng], 15);
-      } else {
-        const bounds = storesWithProduct.map(s => [s.lat, s.lng]);
-        appState.mapInstance.fitBounds(bounds, { padding: [50, 50] });
-      }
+      // Navigate to the cheapest store
+      if (cheapestStore && cheapestStore.lat && cheapestStore.lng) {
+        appState.mapInstance.setView([cheapestStore.lat, cheapestStore.lng], 16);
 
-      showToast('success', 'Resultados encontrados', `${prices.length} preço(s) em ${storesWithProduct.length} loja(s)`);
+        // Select and show the cheapest store
+        appState.selectedStore = cheapestStore;
+        selectStore(cheapestStore.id);
+        showStorePreview(cheapestStore);
+
+        // Open store details to show all products
+        openStoreDetail(cheapestStore);
+
+        showToast('success', '💰 Menor preço encontrado!',
+          `R$ ${cheapestPrice.price.toFixed(2).replace('.', ',')} em ${cheapestStore.name}`);
+      } else {
+        showToast('success', 'Resultados encontrados', `${prices.length} preço(s) em ${storesWithProduct.length} loja(s)`);
+      }
     }
 
-    // Update price list with search results
-    updatePriceList(prices, handlePriceCardClick);
+    // Update price list with search results (sorted by price)
+    updatePriceList(sortedPrices, handlePriceCardClick);
 
     // Store current search
     appState.currentSearch = productName;
@@ -294,6 +311,7 @@ async function searchForProduct(productName) {
     showToast('error', 'Erro ao buscar produto');
   }
 }
+
 
 // Clear search and show all stores
 function clearProductSearch() {
