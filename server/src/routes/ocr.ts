@@ -91,60 +91,113 @@ router.post('/', async (req, res) => {
 
 // Parse receipt text to extract product names and prices
 function parseReceiptText(text: string): Array<{ product: string, price: number, quantity: number, totalPrice: number }> {
-    console.log('📝 Parsing receipt text:', text.substring(0, 200) + '...');
+    console.log('📝 Parsing receipt text:', text.substring(0, 300) + '...');
 
-    const lines = text.split('\n').filter(l => l.trim().length > 3);
+    const lines = text.split('\n').filter(l => l.trim().length > 0);
+
+    // Detect column-separated pattern: products listed first, then prices separately
+    const productLines: Array<{ lineNum: number, name: string }> = [];
+    const priceLines: Array<{ qty: number, price: number }> = [];
+
+    // Pattern for product lines: "001 08871124 PRODUCT NAME" or "00N CODE PRODUCT"
+    const productPattern = /^0*(\d{1,3})\s+[\dA-Za-z]{6,12}\s+(.+)$/;
+    // Pattern for price lines: "1un F1 10,39)" or "lun T19,00% 6,99)"
+    const pricePattern = /^[1liI]?\s*[uU][nN]\s*(?:[FfTt][1IiEe]?)?(?:\d{1,2}[.,]\d{2}%)?\s*(\d{1,4}[.,]\d{2})\s*\)?$/;
+
+    // First pass: identify product and price lines
+    for (const line of lines) {
+        const trimmed = line.trim();
+
+        const productMatch = trimmed.match(productPattern);
+        if (productMatch) {
+            productLines.push({
+                lineNum: parseInt(productMatch[1]),
+                name: productMatch[2].trim()
+            });
+            continue;
+        }
+
+        const priceMatch = trimmed.match(pricePattern);
+        if (priceMatch) {
+            priceLines.push({
+                qty: 1,
+                price: parseFloat(priceMatch[1].replace(',', '.'))
+            });
+        }
+    }
+
+    console.log(`📋 Found ${productLines.length} product lines, ${priceLines.length} price lines`);
+
     const items: Array<{ product: string, price: number, quantity: number, totalPrice: number }> = [];
     const seenProducts = new Set<string>();
 
-    // Patterns to ignore - summary and metadata lines
-    const ignorePattern = /^(?:TOTAL|SUBTOTAL|TROCO|DINHEIRO|CART[AÃ]O|CREDITO|DEBITO|VALOR\s*(?:TOTAL|PAGO|DOS|IMPOSTOS)?|ITENS?|CNPJ|CPF|DATA|HORA|QTD|QUANTIDADE|VL\s*UNIT|IMPOSTOS?|DESCONTO|ACRESCIMO|SAT|NFCe|CUPOM|FISCAL|TRIBUT|TEF|ENVIE|SMS|NR\s*PDV|NR\s*CUPOM|Op\s*:|CUPON|CONCORRA|PREMIOS)/i;
+    // Check if we have column separation (matching counts or close)
+    if (productLines.length > 0 && priceLines.length > 0 &&
+        Math.abs(productLines.length - priceLines.length) <= 2) {
 
-    console.log(`📋 Processing ${lines.length} lines...`);
+        console.log('📊 Detected column-separated receipt format - matching by order');
 
-    for (const line of lines) {
-        const cleanLine = line.trim();
+        // Match products with prices by order
+        const minLen = Math.min(productLines.length, priceLines.length);
 
-        // Skip short or ignored lines
-        if (cleanLine.length < 5) continue;
-        if (ignorePattern.test(cleanLine)) continue;
+        for (let i = 0; i < minLen; i++) {
+            const product = productLines[i];
+            const priceInfo = priceLines[i];
 
-        // Try multiple extraction strategies
-        const extracted = extractProductAndPrice(cleanLine);
+            let productName = cleanProductName(product.name);
 
-        if (!extracted) continue;
+            if (!productName || productName.length < 2) continue;
+            if (priceInfo.price < 0.01 || priceInfo.price > 10000) continue;
 
-        const { productName, price, quantity } = extracted;
+            // Check duplicates
+            const duplicateKey = `${productName.toUpperCase()}_${priceInfo.price.toFixed(2)}`;
+            if (seenProducts.has(duplicateKey)) continue;
+            seenProducts.add(duplicateKey);
 
-        // Calculate unit price if quantity > 1
-        const unitPrice = quantity > 1
-            ? Math.round((price / quantity) * 100) / 100
-            : price;
+            console.log(`✅ Matched: "${productName}" - R$${priceInfo.price.toFixed(2)}`);
 
-        // Check duplicates
-        const normalizedName = productName.toUpperCase();
-        const duplicateKey = `${normalizedName}_${unitPrice.toFixed(2)}`;
-        if (seenProducts.has(duplicateKey)) continue;
-        seenProducts.add(duplicateKey);
+            items.push({
+                product: productName,
+                price: priceInfo.price,
+                totalPrice: priceInfo.price,
+                quantity: 1
+            });
+        }
+    } else {
+        // Fallback to single-line extraction strategy
+        console.log('📋 Using single-line extraction strategy');
 
-        console.log(`✅ Extracted: "${productName}" - R$${unitPrice} (qty: ${quantity})`);
+        for (const line of lines) {
+            const extracted = extractProductAndPrice(line.trim());
+            if (!extracted) continue;
 
-        items.push({
-            product: productName,
-            price: unitPrice,
-            totalPrice: price,
-            quantity: quantity
-        });
+            const { productName, price, quantity } = extracted;
+            const unitPrice = quantity > 1
+                ? Math.round((price / quantity) * 100) / 100
+                : price;
+
+            const duplicateKey = `${productName.toUpperCase()}_${unitPrice.toFixed(2)}`;
+            if (seenProducts.has(duplicateKey)) continue;
+            seenProducts.add(duplicateKey);
+
+            console.log(`✅ Extracted: "${productName}" - R$${unitPrice}`);
+
+            items.push({
+                product: productName,
+                price: unitPrice,
+                totalPrice: price,
+                quantity: quantity
+            });
+        }
     }
 
     console.log(`📋 Total items extracted: ${items.length}`);
     return items;
 }
 
-// Extract product and price from a single line
+// Extract product and price from a single line (fallback strategy)
 function extractProductAndPrice(line: string): { productName: string, price: number, quantity: number } | null {
     // Strategy 1: Brazilian receipt format "001 08871124 PRODUCT NAME 1un F1 10,39)"
-    // Common format: LINE_NUM CODE PRODUCT QTY TAX PRICE)
     const brazilPattern = /^[\dOo]{1,3}\s+[\dA-Z]{6,10}\s+(.+?)\s+(\d+)\s*(?:un|UN)\s*[Ff][1IiEe]?\s*(\d{1,4}[.,]\d{2})\s*\)?$/i;
     let match = line.match(brazilPattern);
     if (match) {
@@ -161,7 +214,6 @@ function extractProductAndPrice(line: string): { productName: string, price: num
     match = line.match(simplePattern);
     if (match) {
         let productName = match[1];
-        // Extract quantity from product name if present
         let quantity = 1;
         const qtyMatch = productName.match(/\s+(\d+)\s*(?:un|UN)\s*[Ff]?[1IiEe]?\s*$/i);
         if (qtyMatch) {
@@ -180,10 +232,8 @@ function extractProductAndPrice(line: string): { productName: string, price: num
     match = line.match(anyPricePattern);
     if (match) {
         let productName = match[1];
-        // Skip if product name looks like a code
         if (/^[\d\s]{10,}$/.test(productName)) return null;
 
-        // Extract quantity
         let quantity = 1;
         const qtyMatch = productName.match(/\s+(\d+)\s*(?:un|UN)/i);
         if (qtyMatch) {
@@ -194,7 +244,6 @@ function extractProductAndPrice(line: string): { productName: string, price: num
         productName = cleanProductName(productName);
         const price = parseFloat(match[2].replace(',', '.'));
 
-        // Validate
         if (!productName || productName.length < 2) return null;
         if (isNaN(price) || price < 0.01 || price > 10000) return null;
 
