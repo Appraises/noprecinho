@@ -97,41 +97,24 @@ export async function terminateOCRWorker() {
     }
 }
 
-// OCR - Extract text from receipt/price tag image using Tesseract.js
+// OCR - Extract text from receipt/price tag image
+// Tries Google Cloud Vision (backend) first, falls back to Tesseract.js (local)
 export async function extractPriceFromImage(file, onProgress = null) {
     console.log('📸 Starting OCR extraction...');
     const startTime = Date.now();
 
     try {
-        // Preprocess image for better OCR results
-        const processedImage = await preprocessImageForOCR(file);
+        // First, try backend OCR (Google Cloud Vision) if available
+        const backendResult = await tryBackendOCR(file, onProgress);
+        if (backendResult) {
+            console.log('☁️ Using Google Cloud Vision OCR');
+            return backendResult;
+        }
 
-        // Initialize worker if needed
-        const worker = await initOCRWorker(onProgress);
+        // Fallback to local Tesseract.js
+        console.log('📱 Falling back to local Tesseract.js OCR');
+        return await localTesseractOCR(file, onProgress, startTime);
 
-        // Run OCR
-        const result = await worker.recognize(processedImage);
-        const rawText = result.data.text;
-
-        console.log(`✅ OCR completed in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
-        console.log('📄 Extracted text:', rawText);
-
-        // Parse extracted text line by line to keep context
-        const items = extractReceiptItems(rawText);
-        const storeInfo = extractStoreFromText(rawText);
-
-        return {
-            success: true,
-            confidence: result.data.confidence / 100,
-            extracted: {
-                prices: items.map(i => ({ value: i.price, confidence: i.confidence })), // legacy support
-                products: items.map(i => ({ text: i.product, quantity: i.quantity, unit: i.unit })), // legacy support
-                items: items, // New better structure
-                store: storeInfo
-            },
-            rawText,
-            processingTime: Date.now() - startTime
-        };
     } catch (error) {
         console.error('❌ OCR failed:', error);
         return {
@@ -142,6 +125,93 @@ export async function extractPriceFromImage(file, onProgress = null) {
             rawText: ''
         };
     }
+}
+
+// Try backend OCR (Google Cloud Vision)
+async function tryBackendOCR(file, onProgress) {
+    try {
+        // Import API module dynamically to avoid circular deps
+        const { processReceiptOCR, checkOCRStatus } = await import('../api.js');
+
+        // Check if backend OCR is available
+        const status = await checkOCRStatus();
+        if (!status.available) {
+            console.log('⚠️ Backend OCR not available, will use Tesseract');
+            return null;
+        }
+
+        if (onProgress) onProgress(0.1);
+
+        // Convert file to base64
+        const base64 = await fileToBase64(file);
+
+        if (onProgress) onProgress(0.3);
+
+        // Call backend OCR
+        const result = await processReceiptOCR(base64);
+
+        if (onProgress) onProgress(1);
+
+        if (!result.success) {
+            console.warn('⚠️ Backend OCR failed:', result.error);
+            return null;
+        }
+
+        // Parse store info from raw text
+        const storeInfo = extractStoreFromText(result.rawText);
+
+        return {
+            success: true,
+            confidence: result.confidence || 0.95,
+            extracted: {
+                prices: result.items.map(i => ({ value: i.price, confidence: 0.95 })),
+                products: result.items.map(i => ({ text: i.product, quantity: i.quantity })),
+                items: result.items,
+                store: storeInfo
+            },
+            rawText: result.rawText,
+            processingTime: result.processingTime,
+            provider: 'google-cloud-vision'
+        };
+
+    } catch (error) {
+        console.warn('⚠️ Backend OCR error, falling back to Tesseract:', error.message);
+        return null;
+    }
+}
+
+// Local Tesseract.js OCR (fallback)
+async function localTesseractOCR(file, onProgress, startTime) {
+    // Preprocess image for better OCR results
+    const processedImage = await preprocessImageForOCR(file);
+
+    // Initialize worker if needed
+    const worker = await initOCRWorker(onProgress);
+
+    // Run OCR
+    const result = await worker.recognize(processedImage);
+    const rawText = result.data.text;
+
+    console.log(`✅ Tesseract OCR completed in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
+    console.log('📄 Extracted text:', rawText);
+
+    // Parse extracted text line by line to keep context
+    const items = extractReceiptItems(rawText);
+    const storeInfo = extractStoreFromText(rawText);
+
+    return {
+        success: true,
+        confidence: result.data.confidence / 100,
+        extracted: {
+            prices: items.map(i => ({ value: i.price, confidence: i.confidence })),
+            products: items.map(i => ({ text: i.product, quantity: i.quantity, unit: i.unit })),
+            items: items,
+            store: storeInfo
+        },
+        rawText,
+        processingTime: Date.now() - startTime,
+        provider: 'tesseract-js'
+    };
 }
 
 // Preprocess image for better OCR accuracy

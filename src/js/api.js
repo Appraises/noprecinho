@@ -428,6 +428,32 @@ export async function getSharedLists() {
     return apiRequest('/shopping-lists/shared');
 }
 
+// ==================== OCR ====================
+
+/**
+ * Process image with backend OCR (Google Vision)
+ * @param {string} base64Image - Base64 encoded image
+ * @returns {Promise<Object>} - { success, rawText, items, confidence, processingTime }
+ */
+export async function processReceiptOCR(base64Image) {
+    return apiRequest('/ocr', {
+        method: 'POST',
+        body: JSON.stringify({ image: base64Image })
+    });
+}
+
+/**
+ * Check if backend OCR is available
+ * @returns {Promise<Object>} - { available, provider, hasCredentials }
+ */
+export async function checkOCRStatus() {
+    try {
+        return await apiRequest('/ocr/status');
+    } catch {
+        return { available: false, provider: null, hasCredentials: false };
+    }
+}
+
 export const api = {
     // Stores
     fetchStores,

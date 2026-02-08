@@ -16,6 +16,7 @@ import pushRoutes from './routes/push.js';
 import uploadsRoutes from './routes/uploads.js';
 import favoritesRoutes from './routes/favorites.js';
 import searchRoutes from './routes/search.js';
+import ocrRoutes from './routes/ocr.js';
 
 // Middleware
 import { authLimiter, apiLimiter, strictLimiter } from './middleware/rateLimit.js';
@@ -71,6 +72,7 @@ app.use('/api/push', apiLimiter, pushRoutes);
 app.use('/api/uploads', strictLimiter, uploadsRoutes);
 app.use('/api/favorites', apiLimiter, favoritesRoutes);
 app.use('/api/search', apiLimiter, searchRoutes);
+app.use('/api/ocr', strictLimiter, ocrRoutes);
 
 // 404 handler
 app.use((req, res) => {
