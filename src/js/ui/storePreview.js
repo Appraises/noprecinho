@@ -3,16 +3,26 @@ import { formatTimeAgo, formatPrice, formatDistance, getCategoryIcon } from '../
 
 let previewElement = null;
 let onDetailsClickCallback = null;
+let onReportClickCallback = null;
 
-export function initStorePreview(onDetailsClick) {
+export function initStorePreview(onDetailsClick, onReportClick) {
     previewElement = document.getElementById('store-preview');
     onDetailsClickCallback = onDetailsClick;
+    onReportClickCallback = onReportClick;
 
     // Details button
     const detailsBtn = document.getElementById('preview-details-btn');
     detailsBtn?.addEventListener('click', () => {
         if (onDetailsClickCallback) {
             onDetailsClickCallback();
+        }
+    });
+
+    // Report button
+    const reportBtn = document.getElementById('preview-report-btn');
+    reportBtn?.addEventListener('click', () => {
+        if (onReportClickCallback) {
+            onReportClickCallback();
         }
     });
 

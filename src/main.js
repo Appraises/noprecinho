@@ -180,12 +180,21 @@ async function init() {
   // Initialize UI components
   initFilters(handleCategoryChange);
 
-  // Initialize store preview with detail click handler
-  initStorePreview(() => {
-    if (appState.selectedStore) {
-      openStoreDetail(appState.selectedStore);
+  // Initialize store preview with detail and report click handlers
+  initStorePreview(
+    // On details click
+    () => {
+      if (appState.selectedStore) {
+        openStoreDetail(appState.selectedStore);
+      }
+    },
+    // On report click
+    () => {
+      if (appState.selectedStore) {
+        openReportModal(appState.selectedStore);
+      }
     }
-  });
+  );
 
   initPricePanel();
   initReportModal(handlePriceReport);
