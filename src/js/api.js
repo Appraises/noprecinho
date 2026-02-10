@@ -193,7 +193,18 @@ export async function createProduct(productData) {
     });
 }
 
-// ==================== SHOPPING LISTS ====================
+/**
+ * Search the Product catalog (all products, not filtered by prices)
+ * Used for autocomplete when reporting new prices
+ * @param {string} query - Search query
+ * @returns {Promise<Array>}
+ */
+export async function fetchCatalogProducts(query) {
+    const params = new URLSearchParams({ q: query });
+    return apiRequest(`/products/catalog?${params.toString()}`);
+}
+
+// ==================== SHOPPING LISTS ==
 
 /**
  * Fetch user's shopping lists
@@ -470,6 +481,7 @@ export const api = {
     searchProducts,
     compareProductPrices,
     createProduct,
+    fetchCatalogProducts,
     getSearchSuggestions,
     search,
     // Shopping Lists

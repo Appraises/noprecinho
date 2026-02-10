@@ -5,6 +5,50 @@ import { authMiddleware, optionalAuthMiddleware, AuthRequest } from '../middlewa
 const router = Router();
 
 /**
+ * Search the Product catalog for autocomplete in report modal
+ * Returns ALL matching products from the catalog (not filtered by prices)
+ * GET /api/products/catalog?q=arroz
+ */
+router.get('/catalog', optionalAuthMiddleware, async (req: AuthRequest, res: Response) => {
+    try {
+        const { q, limit = '15' } = req.query;
+
+        if (!q || (q as string).length < 1) {
+            return res.status(400).json({ error: 'Query é obrigatória' });
+        }
+
+        const searchTerm = (q as string).toLowerCase();
+        const pageSize = Math.min(30, parseInt(limit as string) || 15);
+
+        const products = await prisma.product.findMany({
+            where: {
+                OR: [
+                    { name: { contains: searchTerm, mode: 'insensitive' } },
+                    { aliases: { hasSome: [searchTerm] } },
+                    { brand: { contains: searchTerm, mode: 'insensitive' } }
+                ]
+            },
+            select: {
+                id: true,
+                name: true,
+                category: true,
+                brand: true,
+                unit: true,
+                size: true,
+                imageUrl: true
+            },
+            take: pageSize,
+            orderBy: { name: 'asc' }
+        });
+
+        return res.json(products);
+    } catch (error) {
+        console.error('Product catalog search error:', error);
+        return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
+/**
  * Search products across all stores
  * GET /api/products/search?q=arroz
  */

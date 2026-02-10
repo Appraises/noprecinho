@@ -1,5 +1,6 @@
 // Report price modal - Receipt-first with auto-extract
-import { products, addPrice, searchProducts } from '../data/mockData.js';
+import { api } from '../api.js';
+import { addPrice } from '../data/mockData.js';
 import { stores as mockStores } from '../data/mockData.js';
 import { formatPrice, getCategoryIcon, getCategoryLabel } from '../utils/formatters.js';
 import { extractPriceFromImage, compressImage, blurSensitiveAreas } from '../utils/imageUtils.js';
@@ -656,9 +657,66 @@ function attachHandlers() {
     }, 400);
   });
 
-  // Product input
-  document.getElementById('product-name')?.addEventListener('input', (e) => {
+  // Product input with autocomplete from Product catalog
+  let productSearchTimeout = null;
+  const productInput = document.getElementById('product-name');
+  const suggestionsDiv = document.getElementById('product-suggestions');
+
+  productInput?.addEventListener('input', (e) => {
     manualData.product = e.target.value;
+    const query = e.target.value.trim();
+
+    if (productSearchTimeout) clearTimeout(productSearchTimeout);
+
+    if (query.length < 1) {
+      if (suggestionsDiv) {
+        suggestionsDiv.classList.add('hidden');
+        suggestionsDiv.innerHTML = '';
+      }
+      return;
+    }
+
+    productSearchTimeout = setTimeout(async () => {
+      try {
+        const products = await api.fetchCatalogProducts(query);
+
+        if (products && products.length > 0 && suggestionsDiv) {
+          suggestionsDiv.innerHTML = products.map(p => `
+            <div class="search-suggestion" data-name="${p.name}">
+              <span class="search-suggestion__icon">${getCategoryIcon(p.category || 'outros')}</span>
+              <div class="search-suggestion__content">
+                <span class="search-suggestion__text">${p.name}</span>
+                ${p.brand ? `<span class="search-suggestion__meta">${p.brand}</span>` : ''}
+                ${p.size ? `<span class="search-suggestion__meta">${p.size}</span>` : ''}
+              </div>
+            </div>
+          `).join('');
+          suggestionsDiv.classList.remove('hidden');
+
+          // Click handlers for suggestions
+          suggestionsDiv.querySelectorAll('.search-suggestion').forEach(sug => {
+            sug.addEventListener('click', () => {
+              const name = sug.dataset.name;
+              manualData.product = name;
+              productInput.value = name;
+              suggestionsDiv.classList.add('hidden');
+              // Focus on price input after selecting product
+              document.getElementById('price-input')?.focus();
+            });
+          });
+        } else if (suggestionsDiv) {
+          suggestionsDiv.innerHTML = `
+            <div class="search-suggestion" style="cursor: default; opacity: 0.6;">
+              <span class="search-suggestion__icon">📦</span>
+              <span class="search-suggestion__text">Nenhum produto encontrado — digite o nome completo</span>
+            </div>
+          `;
+          suggestionsDiv.classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Product catalog search error:', error);
+      }
+    }, 300);
   });
 
   document.getElementById('price-input')?.addEventListener('input', (e) => {
