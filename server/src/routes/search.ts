@@ -19,8 +19,8 @@ router.get('/suggestions', optionalAuthMiddleware, async (req: AuthRequest, res:
         const searchTerm = q.trim();
         const maxResults = Math.min(parseInt(limit as string) || 10, 20);
 
-        // Search products
-        const products = await prisma.product.findMany({
+        // Search products - only those that have at least one price entry
+        const allMatchingProducts = await prisma.product.findMany({
             where: {
                 OR: [
                     { name: { contains: searchTerm, mode: 'insensitive' } },
@@ -35,8 +35,25 @@ router.get('/suggestions', optionalAuthMiddleware, async (req: AuthRequest, res:
                 brand: true,
                 imageUrl: true
             },
-            take: maxResults
+            take: maxResults * 3 // Fetch more to compensate for filtering
         });
+
+        // Filter to only products that have actual price entries
+        let products = allMatchingProducts;
+        if (allMatchingProducts.length > 0) {
+            const productNames = allMatchingProducts.map(p => p.name);
+            const existingPrices = await prisma.price.findMany({
+                where: {
+                    product: { in: productNames, mode: 'insensitive' }
+                },
+                select: { product: true },
+                distinct: ['product']
+            });
+            const priceProductNames = new Set(existingPrices.map(p => p.product.toLowerCase()));
+            products = allMatchingProducts
+                .filter(p => priceProductNames.has(p.name.toLowerCase()))
+                .slice(0, maxResults);
+        }
 
         // Search stores
         const stores = await prisma.store.findMany({
