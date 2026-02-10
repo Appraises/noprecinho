@@ -443,7 +443,8 @@ section h2 {
 /* ===== Section: Features ===== */
 .section-features {
     padding: 6rem 0;
-    background: var(--l-bg);
+    background: var(--l-bg-alt);
+    border-top: 1px solid var(--l-border);
     text-align: left;
 }
 
