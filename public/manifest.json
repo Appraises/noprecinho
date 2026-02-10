@@ -1,6 +1,6 @@
 {
-    "name": "PreçoJá",
-    "short_name": "PreçoJá",
+    "name": "NoPrecinho",
+    "short_name": "NoPrecinho",
     "description": "Compare preços em tempo real na sua cidade. Economize nas compras do dia a dia!",
     "start_url": "/app.html",
     "display": "standalone",

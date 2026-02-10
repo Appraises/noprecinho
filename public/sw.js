@@ -220,7 +220,7 @@ self.addEventListener('push', (event) => {
     };
 
     event.waitUntil(
-        self.registration.showNotification(data.title || 'PreçoJá', options)
+        self.registration.showNotification(data.title || 'NoPrecinho', options)
     );
 });
 

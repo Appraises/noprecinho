@@ -91,7 +91,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 // Initialize the application
 async function init() {
-  console.log('🚀 Initializing PreçoJá...');
+  console.log('🚀 Initializing NoPrecinho...');
 
   // Check Authentication
   auth.requireAuth();
@@ -255,7 +255,7 @@ async function init() {
   // Update points display
   updatePointsDisplay();
 
-  console.log('✅ PreçoJá initialized successfully');
+  console.log('✅ NoPrecinho initialized successfully');
 }
 
 // Search for a product and filter map to show stores with that product

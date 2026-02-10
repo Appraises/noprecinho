@@ -1,5 +1,5 @@
 /**
- * API Client for PreçoJá backend
+ * API Client for NoPrecinho backend
  */
 
 import { auth } from './auth.js';

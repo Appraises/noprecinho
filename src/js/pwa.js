@@ -24,7 +24,7 @@ export function initPWAInstall() {
     window.addEventListener('appinstalled', () => {
         deferredPrompt = null;
         hideInstallButton();
-        console.log('📱 PreçoJá instalado com sucesso!');
+        console.log('📱 NoPrecinho instalado com sucesso!');
     });
 
     // Check if already installed
