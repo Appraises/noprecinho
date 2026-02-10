@@ -11,23 +11,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/css/landing.css">
     <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
         body {
             background-color: #F8FAFC;
             height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            margin: 0;
         }
 
         .auth-container {
             width: 100%;
-            max-width: 420px;
+            max-width: 480px;
             padding: 2rem;
         }
 
         .auth-card {
             background: #FFFFFF;
-            padding: 2.5rem 3rem;
+            padding: 3rem 3.5rem;
             border-radius: 16px;
             border: 1px solid #E2E8F0;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
