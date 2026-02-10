@@ -320,6 +320,128 @@ body {
     }
 }
 
+/* Modal "Como funciona?" */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(6px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-container {
+    background: var(--l-bg);
+    border-radius: 20px;
+    padding: 2.5rem;
+    max-width: 560px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15);
+    transform: translateY(20px) scale(0.97);
+    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    text-align: left;
+}
+
+.modal-overlay.active .modal-container {
+    transform: translateY(0) scale(1);
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1.2rem;
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    color: var(--l-text-muted);
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s, transform 0.2s;
+    padding: 0.25rem;
+}
+
+.modal-close:hover {
+    color: var(--l-text);
+    transform: scale(1.15);
+}
+
+.modal-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--l-text);
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.01em;
+}
+
+.modal-subtitle {
+    color: var(--l-text-muted);
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.modal-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.modal-step {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1rem;
+    border-radius: 12px;
+    background: var(--l-bg-alt);
+    border: 1px solid var(--l-border);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.modal-step:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 200, 150, 0.1);
+}
+
+.step-icon {
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.step-content h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--l-text);
+    margin-bottom: 0.25rem;
+}
+
+.step-content p {
+    font-size: 0.85rem;
+    color: var(--l-text-muted);
+    line-height: 1.5;
+    margin: 0;
+}
+
 @media (max-width: 900px) {
     .hero-wrapper {
         grid-template-columns: 1fr;
