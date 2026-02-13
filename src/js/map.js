@@ -178,8 +178,7 @@ export function initMap(elementId, options = {}) {
 
     mapInstance.addLayer(markersLayer);
 
-    // Create layer for shopping indicators (labels)
-    shoppingIndicatorsLayer = L.layerGroup().addTo(mapInstance);
+
 
     // Create separate cluster groups for each category
     Object.keys(categoryConfig).forEach(category => {
@@ -463,8 +462,14 @@ export async function showRouteToStore(store, userLocation) {
 }
 
 // Show shopping list items above stores on map
+// Show shopping list items above stores on map
 export function showShoppingIndicators(stops) {
-    if (!mapInstance || !shoppingIndicatorsLayer) return;
+    if (!mapInstance) return;
+
+    // Lazy init
+    if (!shoppingIndicatorsLayer) {
+        shoppingIndicatorsLayer = L.layerGroup().addTo(mapInstance);
+    }
 
     // Clear existing indicators
     shoppingIndicatorsLayer.clearLayers();
