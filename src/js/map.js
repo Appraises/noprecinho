@@ -471,12 +471,13 @@ export function showShoppingIndicators(stops) {
 
     stops.forEach(stop => {
         const store = stop.store || stop;
-        const items = stop.items || stop.storeAItems || stop.storeBItems || [];
+        const rawItems = stop.items || stop.storeAItems || stop.storeBItems;
+        const items = Array.isArray(rawItems) ? rawItems : [];
 
         if (!store.lat || !store.lng) return;
 
         // Create a custom label icon
-        const itemsHtml = items.map(i => `• ${i.productName || i.name}`).join('<br>');
+        const itemsHtml = items.map(i => `• ${i.productName || i.name}`).join('<br>'); // Defensive map check already handled by empty array default
         const labelHtml = `
             <div class="shopping-label">
                 <div class="shopping-label__title">${store.name}</div>

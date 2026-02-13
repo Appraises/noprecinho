@@ -439,7 +439,7 @@ async function runOptimization() {
             } else if (optimizationData.recommendation === 'single' && optimizationData.singleStoreOptions?.length > 0) {
                 const best = optimizationData.singleStoreOptions[0];
                 onHighlightStores({
-                    stops: [{ store: best.store, items: best.missingItems ? 0 : 1 }] // 1 implies found
+                    stops: [{ store: best.store, items: best.items || [] }]
                 });
             }
         }
@@ -462,7 +462,7 @@ async function runOptimization() {
 function renderOptimizationResults(data) {
     const results = document.getElementById('optimization-results');
 
-    if (!data || !data.singleStoreOptions || data.singleStoreOptions.length === 0) {
+    if (!data || ((!data.singleStoreOptions || data.singleStoreOptions.length === 0) && !data.twoStoreSplit)) {
         results.innerHTML = `
             <div class="optimization-empty">
                 Não encontramos preços para os itens da sua lista.
@@ -473,40 +473,14 @@ function renderOptimizationResults(data) {
 
     let html = '';
 
-    // Single store options
-    html += '<div class="store-options">';
-    html += '<div class="store-options__title">Uma loja:</div>';
+    // Decision Logic: 
+    // If recommendation is 'split', show split view. 
+    // Only show single store options if 'single' OR if we want to provide alternatives.
+    // User requested to NOT show single store options if it doesn't make sense (e.g. missing items in split scenario).
+    // So we will prioritize the recommendation.
 
-    data.singleStoreOptions.slice(0, 3).forEach((opt, i) => {
-        const isFirst = i === 0;
-        const hasDistance = opt.distanceKm !== undefined && opt.distanceKm > 0;
-        const itemsHtml = (opt.items || []).map(item => `
-            <div class="store-option__item">
-                <span class="store-option__item-name">${item.productName}</span>
-                <span class="store-option__item-price">R$ ${item.price.toFixed(2).replace('.', ',')}${item.quantity > 1 ? ` x${item.quantity}` : ''}</span>
-            </div>
-        `).join('');
-        html += `
-            <div class="store-option ${isFirst ? 'store-option--best' : ''}" data-store-id="${opt.store.id}">
-                <div class="store-option__header">
-                    <div class="store-option__main">
-                        <span class="store-option__name">${opt.store.name}</span>
-                        ${hasDistance ? `<span class="store-option__distance">📍 ${opt.distanceKm} km</span>` : ''}
-                    </div>
-                    <div class="store-option__prices">
-                        <span class="store-option__total">R$ ${opt.total.toFixed(2).replace('.', ',')}</span>
-                        ${hasDistance && opt.travelCost > 0 ? `<span class="store-option__travel">+ R$ ${opt.travelCost.toFixed(2).replace('.', ',')} combustível</span>` : ''}
-                    </div>
-                </div>
-                ${opt.itemsMissing?.length ? `<span class="store-option__missing">(faltam ${opt.itemsMissing.length}: ${opt.itemsMissing.join(', ')})</span>` : ''}
-                ${itemsHtml ? `<div class="store-option__items">${itemsHtml}</div>` : ''}
-            </div>
-        `;
-    });
-    html += '</div>';
-
-    // Two store split (if recommended)
-    if (data.twoStoreSplit && data.recommendation === 'split') {
+    if (data.recommendation === 'split' && data.twoStoreSplit) {
+        // Render Split View
         const split = data.twoStoreSplit;
         const storeA = split.store1 || split.storeA;
         const storeB = split.store2 || split.storeB;
@@ -516,6 +490,7 @@ function renderOptimizationResults(data) {
         const totalB = split.total2 || split.storeBTotal || 0;
 
         const hasRoute = split.routeDescription && split.totalDistanceKm > 0;
+
         html += `
             <div class="split-recommendation">
                 <div class="split-recommendation__header">
@@ -551,6 +526,38 @@ function renderOptimizationResults(data) {
                 </button>
             </div>
         `;
+    } else if (data.singleStoreOptions && data.singleStoreOptions.length > 0) {
+        // Render Single Store Options
+        html += '<div class="store-options">';
+        html += '<div class="store-options__title">Uma loja:</div>';
+
+        data.singleStoreOptions.slice(0, 3).forEach((opt, i) => {
+            const isFirst = i === 0;
+            const hasDistance = opt.distanceKm !== undefined && opt.distanceKm > 0;
+            const itemsHtml = (opt.items || []).map(item => `
+                <div class="store-option__item">
+                    <span class="store-option__item-name">${item.productName}</span>
+                    <span class="store-option__item-price">R$ ${item.price.toFixed(2).replace('.', ',')}${item.quantity > 1 ? ` x${item.quantity}` : ''}</span>
+                </div>
+            `).join('');
+            html += `
+                <div class="store-option ${isFirst ? 'store-option--best' : ''}" data-store-id="${opt.store.id}">
+                    <div class="store-option__header">
+                        <div class="store-option__main">
+                            <span class="store-option__name">${opt.store.name}</span>
+                            ${hasDistance ? `<span class="store-option__distance">📍 ${opt.distanceKm} km</span>` : ''}
+                        </div>
+                        <div class="store-option__prices">
+                            <span class="store-option__total">R$ ${opt.total.toFixed(2).replace('.', ',')}</span>
+                            ${hasDistance && opt.travelCost > 0 ? `<span class="store-option__travel">+ R$ ${opt.travelCost.toFixed(2).replace('.', ',')} combustível</span>` : ''}
+                        </div>
+                    </div>
+                    ${opt.itemsMissing?.length ? `<span class="store-option__missing">(faltam ${opt.itemsMissing.length}: ${opt.itemsMissing.join(', ')})</span>` : ''}
+                    ${itemsHtml ? `<div class="store-option__items">${itemsHtml}</div>` : ''}
+                </div>
+            `;
+        });
+        html += '</div>';
     }
 
     results.innerHTML = html;
@@ -561,19 +568,51 @@ function renderOptimizationResults(data) {
         mapBtn.addEventListener('click', () => {
             const split = data.twoStoreSplit;
             if (split) {
+                // ... same split map logic ...
+                // Re-implement because I replaced the whole block
                 const storeA = split.store1 || split.storeA;
                 const storeB = split.store2 || split.storeB;
                 const itemsA = split.items1 || split.storeAItems || [];
                 const itemsB = split.items2 || split.storeBItems || [];
 
-                onHighlightStores({
-                    stops: [
-                        { store: storeA, items: itemsA },
-                        { store: storeB, items: itemsB }
-                    ]
-                });
+                // Helper to calc distance (Haversine) - duplicated but necessary if scope issues, 
+                // but actually we are inside event listener, so we can just structure the stops and let leftSidebar.js logic handle it?
+                // Wait, onHighlightStores is just a callback. The sorting logic was in runOptimization.
+                // We should replicate sorting here OR assume onHighlightStores handles it?
+                // `onHighlightStores` in `main.js` just takes stops.
+                // The SORTING was done in `runOptimization` before calling `onHighlightStores`.
+                // I should add sorting here too to be safe, or just pass stops and hope for the best?
+                // Better to sort here too.
+
+                const getDist = (lat1, lon1, lat2, lon2) => {
+                    const R = 6371;
+                    const dLat = (lat2 - lat1) * Math.PI / 180;
+                    const dLon = (lon2 - lon1) * Math.PI / 180;
+                    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    return R * c;
+                };
+
+                let stops = [
+                    { store: storeA, items: itemsA },
+                    { store: storeB, items: itemsB }
+                ];
+
+                // We need userLocation. It is global in this file.
+                if (userLocation) {
+                    stops.sort((a, b) => {
+                        const distA = getDist(userLocation.lat, userLocation.lng, a.store.lat, a.store.lng);
+                        const distB = getDist(userLocation.lat, userLocation.lng, b.store.lat, b.store.lng);
+                        return distA - distB;
+                    });
+                }
+
+                onHighlightStores({ stops });
             }
-            closeSidebar();
+            // Close sidebar on mobile
+            if (window.innerWidth < 768) closeSidebar();
         });
     }
 
@@ -587,6 +626,7 @@ function renderOptimizationResults(data) {
                     stops: [{ store: opt.store, items: opt.items || [] }]
                 });
             }
+            if (window.innerWidth < 768) closeSidebar();
         });
     });
 
