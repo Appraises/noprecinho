@@ -10,3 +10,4 @@ O NoPrecinho agora conta com **Otimização de Rota Multi-Lojas** e **Etiquetas 
 - **Crescimento Constante**: A cobertura de preços aumenta a cada dia com a colaboração da comunidade! 🚀📈
 - **Sem Limites de Distância**: O app agora busca e otimiza preços em **todas as lojas** cadastradas, sem restrição de raio! 🌍
 - **Mapa Inteligente**: Visualize o que comprar em cada parada com novas etiquetas sobre as lojas. 🛒
+- **Suporte Offline**: O app agora funciona melhor mesmo sem internet, guardando seus dados localmente. 📡
