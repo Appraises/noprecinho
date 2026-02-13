@@ -26,6 +26,12 @@ let selectedProduct = null; // Track valid product selected from autocomplete
  * Initialize shopping list panel
  */
 export function initShoppingListPanel() {
+    // Create backdrop overlay
+    const backdrop = document.createElement('div');
+    backdrop.id = 'shopping-backdrop';
+    backdrop.className = 'shopping-backdrop';
+    document.body.appendChild(backdrop);
+
     listPanel = document.createElement('aside');
     listPanel.id = 'shopping-list-panel';
     listPanel.className = 'shopping-panel';
@@ -49,6 +55,7 @@ export function initShoppingListPanel() {
 
     // Event listeners
     listPanel.querySelector('#shopping-close').addEventListener('click', closeShoppingPanel);
+    backdrop.addEventListener('click', closeShoppingPanel);
     listPanel.querySelector('#new-list-btn').addEventListener('click', handleNewList);
 
     // Add CSS
@@ -62,6 +69,7 @@ export async function openShoppingPanel() {
     if (!listPanel) initShoppingListPanel();
 
     listPanel.classList.add('shopping-panel--visible');
+    document.getElementById('shopping-backdrop')?.classList.add('shopping-backdrop--visible');
     await loadLists();
 }
 
@@ -72,6 +80,7 @@ export function closeShoppingPanel() {
     if (listPanel) {
         listPanel.classList.remove('shopping-panel--visible');
     }
+    document.getElementById('shopping-backdrop')?.classList.remove('shopping-backdrop--visible');
 }
 
 /**
@@ -488,7 +497,7 @@ function addShoppingPanelStyles() {
             height: 100vh;
             background: var(--color-surface);
             border-left: 1px solid var(--color-border);
-            z-index: 1001;
+            z-index: 1300;
             transform: translateX(100%);
             transition: transform 0.3s ease;
             display: flex;
@@ -497,6 +506,24 @@ function addShoppingPanelStyles() {
         
         .shopping-panel--visible {
             transform: translateX(0);
+        }
+
+        .shopping-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1250;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .shopping-backdrop--visible {
+            opacity: 1;
+            visibility: visible;
         }
         
         .shopping-panel__header {

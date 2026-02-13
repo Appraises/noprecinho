@@ -22,9 +22,16 @@ let getUserLocationFn = null;
  * @param {Function} options.onHighlightStores - Callback to highlight stores on map
  */
 export function initLeftSidebar(options = {}) {
-    onHighlightStores = options.onHighlightStores;
-    getUserLocationFn = options.getUserLocation;
+    onHighlightStores = options.onHighlightStores || null;
+    getUserLocationFn = options.getUserLocation || null;
     createSidebar();
+
+    // Create backdrop
+    const backdrop = document.createElement('div');
+    backdrop.id = 'left-sidebar-backdrop';
+    backdrop.className = 'left-sidebar-backdrop';
+    backdrop.addEventListener('click', closeSidebar);
+    document.body.appendChild(backdrop);
     bindEvents();
 }
 
@@ -170,6 +177,7 @@ function bindEvents() {
  */
 export function openSidebar() {
     sidebarElement.classList.add('left-sidebar--open');
+    document.getElementById('left-sidebar-backdrop')?.classList.add('left-sidebar-backdrop--visible');
     isOpen = true;
     loadCurrentList();
 }
@@ -179,6 +187,7 @@ export function openSidebar() {
  */
 export function closeSidebar() {
     sidebarElement.classList.remove('left-sidebar--open');
+    document.getElementById('left-sidebar-backdrop')?.classList.remove('left-sidebar-backdrop--visible');
     isOpen = false;
 }
 
