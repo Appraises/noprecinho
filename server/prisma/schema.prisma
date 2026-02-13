@@ -23,6 +23,7 @@ model User {
   positiveVotesReceived Int @default(0)
   validationsGiven     Int @default(0)
   accuracyScore        Float @default(50) // 0-100 percentage
+  trustScore           Float @default(0.5) // 0-1 composite reputation score
   priceReportsCount    Int @default(0)    // For photo requirement threshold
   
   createdAt     DateTime @default(now())

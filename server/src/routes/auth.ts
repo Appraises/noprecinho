@@ -133,6 +133,10 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
                 email: true,
                 avatar: true,
                 points: true,
+                trustScore: true,
+                accuracyScore: true,
+                validationsGiven: true,
+                priceReportsCount: true,
                 createdAt: true,
                 _count: {
                     select: { prices: true },

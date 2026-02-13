@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { authMiddleware, optionalAuthMiddleware, AuthRequest } from '../middleware/auth.js';
+import { recalculateAndSaveTrustScore } from '../services/trustScore.js';
 
 const router = Router();
 
@@ -272,6 +273,9 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
                 priceReportsCount: { increment: isUpdate ? 0 : 1 }
             },
         });
+
+        // Recalculate reporter's trustScore
+        await recalculateAndSaveTrustScore(req.userId!);
 
         // Record to price history for charts and trends
         try {

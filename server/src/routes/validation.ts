@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import { recalculateAndSaveTrustScore } from '../services/trustScore.js';
 
 const router = Router();
 
@@ -87,6 +88,9 @@ router.post('/:priceId', authMiddleware, async (req: AuthRequest, res: Response)
                 accuracyScore: accuracy
             }
         });
+
+        // Recalculate reporter's trustScore
+        await recalculateAndSaveTrustScore(price.reporterId);
 
         // Award points to validator
         await prisma.user.update({

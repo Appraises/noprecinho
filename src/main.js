@@ -134,6 +134,33 @@ async function init() {
         }
       };
     }
+
+    // Update trust score display
+    const trustScoreRaw = userData.trustScore ?? 0.5;
+    const trustPercent = Math.round(trustScoreRaw * 100);
+    const trustLevel = trustPercent >= 70 ? 'high' : trustPercent >= 40 ? 'medium' : 'low';
+
+    const trustValueEl = document.getElementById('trust-score-value');
+    const trustFillEl = document.getElementById('trust-score-fill');
+    const trustBadgeEl = document.getElementById('trust-score-badge');
+
+    if (trustValueEl) trustValueEl.textContent = trustPercent.toString();
+    if (trustFillEl) {
+      trustFillEl.style.width = `${trustPercent}%`;
+      // Dynamic color: red (0°) → yellow (40°) → green (120°)
+      const hue = Math.round((trustPercent / 100) * 120);
+      trustFillEl.style.setProperty('--bar-color', `hsl(${hue}, 70%, 50%)`);
+    }
+    if (trustBadgeEl) {
+      trustBadgeEl.title = `Reputação: ${trustPercent}% (Trust Score)`;
+      trustBadgeEl.setAttribute('data-level', trustLevel);
+    }
+
+    // Update points display from server data
+    if (userData.points !== undefined) {
+      const pointsCount = document.getElementById('points-count');
+      if (pointsCount) pointsCount.textContent = userData.points.toString();
+    }
   }
 
   // Validate session and update User UI
@@ -565,6 +592,27 @@ async function handlePriceReport(reportData) {
       };
 
       await submitPrice(payload);
+
+      // Refresh user profile to get updated trustScore and points
+      const refreshedUser = await auth.refreshUser();
+      if (refreshedUser) {
+        // Update trust score badge
+        const ts = Math.round((refreshedUser.trustScore ?? 0.5) * 100);
+        const level = ts >= 70 ? 'high' : ts >= 40 ? 'medium' : 'low';
+        const tsVal = document.getElementById('trust-score-value');
+        const tsFill = document.getElementById('trust-score-fill');
+        const tsBadge = document.getElementById('trust-score-badge');
+        if (tsVal) tsVal.textContent = ts.toString();
+        if (tsFill) {
+          tsFill.style.width = `${ts}%`;
+          const hue = Math.round((ts / 100) * 120);
+          tsFill.style.setProperty('--bar-color', `hsl(${hue}, 70%, 50%)`);
+        }
+        if (tsBadge) { tsBadge.title = `Reputação: ${ts}% (Trust Score)`; tsBadge.setAttribute('data-level', level); }
+        // Update points
+        const ptsEl = document.getElementById('points-count');
+        if (ptsEl && refreshedUser.points !== undefined) ptsEl.textContent = refreshedUser.points.toString();
+      }
 
       showToast('success', '+15 pontos!', 'Preço enviado com sucesso');
     } else {
