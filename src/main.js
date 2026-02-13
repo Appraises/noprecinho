@@ -58,7 +58,7 @@ const appState = {
   selectedStore: null,
   activeCategories: ['all'],
   filterSettings: {
-    radius: 5,
+    radius: 10000,
     freshOnly: true,
     verifiedOnly: false,
     openNow: false,
@@ -446,12 +446,7 @@ async function refreshData() {
         : appState.activeCategories.join(',');
 
       const [storesResponse, pricesResponse] = await Promise.all([
-        fetchStores({
-          category: categoryFilter,
-          lat: appState.userLocation?.lat,
-          lng: appState.userLocation?.lng,
-          radius: appState.filterSettings.radius
-        }),
+        fetchStores({ category: categoryFilter }),
         fetchPrices({
           category: categoryFilter,
           freshOnly: appState.filterSettings.freshOnly,
