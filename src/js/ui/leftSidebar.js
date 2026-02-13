@@ -399,7 +399,7 @@ async function runOptimization() {
             userLat: userLocation?.lat,
             userLng: userLocation?.lng,
             travelCostPerKm: 1.50,
-            maxDistanceKm: 10
+            maxDistanceKm: 10000
         });
 
         renderOptimizationResults(optimizationData);

@@ -314,7 +314,7 @@ router.post('/:id/optimize', authMiddleware, async (req: AuthRequest, res: Respo
             userLat,
             userLng,
             travelCostPerKm = 1.50, // R$ per km (fuel estimate)
-            maxDistanceKm = 10
+            maxDistanceKm = 10000
         } = req.body;
 
         // Helper: Calculate distance between two points (Haversine formula)
