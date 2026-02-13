@@ -22,7 +22,7 @@ import './css/responsive.css';
 import { initMap, centerOnUser, addStoreMarkers, selectStore, searchAndPanToStore, searchAddress, showRouteToStore, clearRoute, openDirections, getUserLocation } from './js/map.js';
 import { formatDistance, getCategoryIcon, getCategoryLabel } from './js/utils/formatters.js';
 import { initFilters, getActiveCategories } from './js/ui/filters.js';
-import { initStorePreview, showStorePreview, hideStorePreview } from './js/ui/storePreview.js';
+import { initStorePreview, showStorePreview, hideStorePreview, updateRouteInfo } from './js/ui/storePreview.js';
 import { initPricePanel, updatePriceList } from './js/ui/priceList.js';
 import { initReportModal, openReportModal, setStores } from './js/ui/reportModal.js';
 import { initFilterModal, openFilterModal } from './js/ui/filterModal.js';
@@ -330,6 +330,7 @@ async function searchForProduct(productName) {
         if (appState.userLocation) {
           const routeInfo = await showRouteToStore(cheapestStore, appState.userLocation);
           if (routeInfo) {
+            updateRouteInfo(routeInfo);
             showToast('success', '💰 Menor preço encontrado!',
               `R$ ${cheapestPrice.price.toFixed(2).replace('.', ',')} em ${cheapestStore.name} — ${routeInfo.distanceText}, ${routeInfo.durationText}`);
           } else {
@@ -480,10 +481,18 @@ function handleCategoryChange(categories) {
   refreshData();
 }
 
-function handleStoreClick(store) {
+async function handleStoreClick(store) {
   appState.selectedStore = store;
   selectStore(store.id);
   showStorePreview(store);
+
+  // Show route to store if user location is available
+  if (appState.userLocation) {
+    const routeInfo = await showRouteToStore(store, appState.userLocation);
+    if (routeInfo) {
+      updateRouteInfo(routeInfo);
+    }
+  }
 }
 
 function handleStoreDetailsClick() {

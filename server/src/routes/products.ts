@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { authMiddleware, optionalAuthMiddleware, AuthRequest } from '../middleware/auth.js';
+import { lookupGTIN, validateEAN } from '../services/gtinService.js';
 
 const router = Router();
 

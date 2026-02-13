@@ -71,6 +71,10 @@ export function showStorePreview(store) {
     previewElement.classList.remove('store-preview--hidden');
     previewElement.classList.add('store-preview--visible');
 
+    // Hide route info by default when switching stores
+    const routeEl = document.getElementById('preview-route-info');
+    if (routeEl) routeEl.classList.add('hidden');
+
     try {
         const setContent = (id, text) => {
             const el = document.getElementById(id);
@@ -93,6 +97,19 @@ export function showStorePreview(store) {
     } catch (error) {
         console.error('Error updating store preview:', error);
     }
+}
+
+export function updateRouteInfo(routeInfo) {
+    const routeEl = document.getElementById('preview-route-info');
+    const durationEl = document.getElementById('preview-duration');
+    const distanceEl = document.getElementById('preview-route-dist');
+
+    if (!routeEl || !routeInfo) return;
+
+    if (durationEl) durationEl.textContent = routeInfo.durationText;
+    if (distanceEl) distanceEl.textContent = routeInfo.distanceText;
+
+    routeEl.classList.remove('hidden');
 }
 
 export function hideStorePreview() {
