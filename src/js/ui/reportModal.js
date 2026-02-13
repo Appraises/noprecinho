@@ -20,6 +20,7 @@ let receiptData = {
 let manualData = {
   storeId: null,
   product: '',
+  productId: null,
   unit: 'un',
   price: 0,
   hasPhoto: false,
@@ -120,6 +121,7 @@ export function openReportModal(preselectedStore = null) {
   manualData = {
     storeId: preselectedStore?.id || null,
     product: '',
+    productId: null,
     unit: 'un',
     price: 0,
     hasPhoto: false,
@@ -664,6 +666,7 @@ function attachHandlers() {
 
   productInput?.addEventListener('input', (e) => {
     manualData.product = e.target.value;
+    manualData.productId = null; // Reset on manual typing
     const query = e.target.value.trim();
 
     if (productSearchTimeout) clearTimeout(productSearchTimeout);
@@ -682,7 +685,7 @@ function attachHandlers() {
 
         if (products && products.length > 0 && suggestionsDiv) {
           suggestionsDiv.innerHTML = products.map(p => `
-            <div class="search-suggestion" data-name="${p.name}">
+            <div class="search-suggestion" data-name="${p.name}" data-id="${p.id}">
               <span class="search-suggestion__icon">${getCategoryIcon(p.category || 'outros')}</span>
               <div class="search-suggestion__content">
                 <span class="search-suggestion__text">${p.name}</span>
@@ -697,7 +700,9 @@ function attachHandlers() {
           suggestionsDiv.querySelectorAll('.search-suggestion').forEach(sug => {
             sug.addEventListener('click', () => {
               const name = sug.dataset.name;
+              const id = sug.dataset.id;
               manualData.product = name;
+              manualData.productId = id;
               productInput.value = name;
               suggestionsDiv.classList.add('hidden');
               // Focus on price input after selecting product
@@ -707,8 +712,8 @@ function attachHandlers() {
         } else if (suggestionsDiv) {
           suggestionsDiv.innerHTML = `
             <div class="search-suggestion" style="cursor: default; opacity: 0.6;">
-              <span class="search-suggestion__icon">📦</span>
-              <span class="search-suggestion__text">Nenhum produto encontrado — digite o nome completo</span>
+              <span class="search-suggestion__icon">❌</span>
+              <span class="search-suggestion__text">Produto não encontrado no catálogo</span>
             </div>
           `;
           suggestionsDiv.classList.remove('hidden');
@@ -819,8 +824,20 @@ function handleNext() {
       currentStep = 2;
       render();
     } else if (currentStep === 2) {
-      if (!manualData.product || manualData.price <= 0) {
-        document.getElementById('product-error')?.classList.remove('hidden');
+      if (!manualData.productId) {
+        const errEl = document.getElementById('product-error');
+        if (errEl) {
+          errEl.textContent = 'Selecione um produto da lista de sugestões';
+          errEl.classList.remove('hidden');
+        }
+        return;
+      }
+      if (manualData.price <= 0) {
+        const errEl = document.getElementById('product-error');
+        if (errEl) {
+          errEl.textContent = 'Informe o preço do produto';
+          errEl.classList.remove('hidden');
+        }
         return;
       }
       // Submit immediately on step 2 (simplified flow)
@@ -859,6 +876,7 @@ function handleSubmit() {
     addPrice({
       storeId: manualData.storeId,
       product: manualData.product,
+      productId: manualData.productId,
       price: manualData.price,
       unit: manualData.unit,
       hasPhoto: manualData.hasPhoto,

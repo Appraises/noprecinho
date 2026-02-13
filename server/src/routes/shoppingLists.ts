@@ -85,10 +85,24 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
         // Find best prices for each item
         const itemsWithPrices = await Promise.all(
             list.items.map(async (item) => {
-                const bestPrice = await prisma.price.findFirst({
+                // Resolve product in catalog
+                const catalogProduct = await prisma.product.findFirst({
                     where: {
-                        product: { contains: item.productName, mode: 'insensitive' }
+                        OR: [
+                            { name: { equals: item.productName, mode: 'insensitive' } },
+                            { name: { contains: item.productName, mode: 'insensitive' } },
+                            { aliases: { hasSome: [item.productName.toLowerCase()] } }
+                        ]
                     },
+                    select: { id: true }
+                });
+
+                const priceWhere: any = catalogProduct
+                    ? { productId: catalogProduct.id }
+                    : { product: { contains: item.productName, mode: 'insensitive' } };
+
+                const bestPrice = await prisma.price.findFirst({
+                    where: priceWhere,
                     include: {
                         store: {
                             select: { id: true, name: true, address: true, lat: true, lng: true }
@@ -341,10 +355,25 @@ router.post('/:id/optimize', authMiddleware, async (req: AuthRequest, res: Respo
         const storeCache: Map<string, any> = new Map();
 
         for (const item of list.items) {
-            const prices = await prisma.price.findMany({
+            // First, find the product in the catalog
+            const catalogProduct = await prisma.product.findFirst({
                 where: {
-                    product: { contains: item.productName, mode: 'insensitive' }
+                    OR: [
+                        { name: { equals: item.productName, mode: 'insensitive' } },
+                        { name: { contains: item.productName, mode: 'insensitive' } },
+                        { aliases: { hasSome: [item.productName.toLowerCase()] } }
+                    ]
                 },
+                select: { id: true }
+            });
+
+            // Search prices: prefer FK match, fallback to text match
+            const priceWhere: any = catalogProduct
+                ? { productId: catalogProduct.id }
+                : { product: { contains: item.productName, mode: 'insensitive' } };
+
+            const prices = await prisma.price.findMany({
+                where: priceWhere,
                 include: {
                     store: {
                         select: { id: true, name: true, address: true, lat: true, lng: true, category: true }

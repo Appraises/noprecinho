@@ -81,11 +81,16 @@ model Price {
   reporter     User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
   reporterId   String
   
+  // Link to Product catalog
+  catalogProduct Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productId      String?
+  
   validations  PriceValidation[]
 
   @@index([storeId])
   @@index([reporterId])
   @@index([product])
+  @@index([productId])
   @@index([createdAt]) // For freshness queries
 }
 
@@ -122,6 +127,7 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
+  prices       Price[]
   priceHistory PriceHistory[]
 
   @@index([name])

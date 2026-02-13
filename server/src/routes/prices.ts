@@ -153,7 +153,7 @@ router.get('/', optionalAuthMiddleware, async (req: AuthRequest, res: Response) 
 // Create new price (requires auth)
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     try {
-        const { storeId, product, price, unit, hasPhoto, photoUrl } = req.body;
+        const { storeId, product, productId, price, unit, hasPhoto, photoUrl } = req.body;
 
         // Input validation
         if (!storeId || typeof storeId !== 'string') {
@@ -193,6 +193,16 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Loja não encontrada' });
         }
 
+        // Resolve productId: use provided one, or look up by name
+        let resolvedProductId = productId || null;
+        if (!resolvedProductId && product) {
+            const catalogProduct = await prisma.product.findFirst({
+                where: { name: { equals: product.trim(), mode: 'insensitive' } },
+                select: { id: true }
+            });
+            if (catalogProduct) resolvedProductId = catalogProduct.id;
+        }
+
         // Check if price already exists for this product in this store
         const existingPrice = await prisma.price.findFirst({
             where: {
@@ -217,6 +227,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
                     hasPhoto: hasPhoto === true,
                     photoUrl: photoUrl || existingPrice.photoUrl,
                     reporterId: req.userId!,
+                    productId: resolvedProductId || existingPrice.productId,
                     updatedAt: new Date(),
                 },
                 include: {
@@ -240,6 +251,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
                     photoUrl: photoUrl || null,
                     storeId,
                     reporterId: req.userId!,
+                    productId: resolvedProductId,
                 },
                 include: {
                     store: {
