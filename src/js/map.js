@@ -178,6 +178,9 @@ export function initMap(elementId, options = {}) {
 
     mapInstance.addLayer(markersLayer);
 
+    // Create layer for shopping indicators (labels)
+    shoppingIndicatorsLayer = L.layerGroup().addTo(mapInstance);
+
     // Create separate cluster groups for each category
     Object.keys(categoryConfig).forEach(category => {
         categoryLayers[category] = L.markerClusterGroup({
