@@ -63,6 +63,29 @@ router.get('/', optionalAuthMiddleware, async (req: AuthRequest, res: Response) 
             }
         }
 
+        // Location filter (Bounding Box)
+        if (lat && lng) {
+            const userLat = parseFloat(lat as string);
+            const userLng = parseFloat(lng as string);
+            const radiusKm = parseFloat((radius as string) || '10');
+
+            if (!isNaN(userLat) && !isNaN(userLng) && !isNaN(radiusKm)) {
+                // 1 deg latitude ~= 111km
+                const latDelta = radiusKm / 111;
+                // 1 deg longitude ~= 111km * cos(lat)
+                const lngDelta = radiusKm / (111 * Math.cos(userLat * (Math.PI / 180)));
+
+                where.lat = {
+                    gte: userLat - latDelta,
+                    lte: userLat + latDelta
+                };
+                where.lng = {
+                    gte: userLng - lngDelta,
+                    lte: userLng + lngDelta
+                };
+            }
+        }
+
         // Get total count
         const total = await prisma.store.count({ where });
 
