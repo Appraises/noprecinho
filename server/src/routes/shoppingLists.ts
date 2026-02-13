@@ -38,7 +38,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
         const list = await prisma.shoppingList.create({
             data: {
-                name: name || 'Minha Lista',
+                name: (typeof name === 'string' && name.trim()) ? name : 'Minha Lista',
                 userId: req.userId!,
                 items: items ? {
                     create: items.map((item: any) => ({

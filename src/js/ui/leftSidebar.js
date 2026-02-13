@@ -207,7 +207,7 @@ async function loadCurrentList() {
             renderItems(activeList.items || []);
         } else {
             // Create a new list
-            const newList = await api.createShoppingList({ name: 'Minha Lista' });
+            const newList = await api.createShoppingList('Minha Lista');
             currentListId = newList.id;
             renderItems([]);
         }
@@ -366,10 +366,7 @@ async function runOptimization() {
                     unit: 'un'
                 }));
 
-                const newList = await api.createShoppingList({
-                    name: 'Minha Lista',
-                    items: itemsToCreate
-                });
+                const newList = await api.createShoppingList('Minha Lista', itemsToCreate);
                 currentListId = newList.id;
 
                 // Clear local storage as we migrated to server
