@@ -345,14 +345,16 @@ async function runOptimization() {
     results.innerHTML = '<div class="optimization-loading">Buscando melhores preços...</div>';
 
     try {
-        if (currentListId) {
-            optimizationData = await api.optimizeShoppingList(currentListId, {
-                userLat: userLocation?.lat,
-                userLng: userLocation?.lng,
-                travelCostPerKm: 1.50,
-                maxDistanceKm: 10
-            });
+        if (!currentListId) {
+            throw new Error('Você precisa estar logado para otimizar sua lista.');
         }
+
+        optimizationData = await api.optimizeShoppingList(currentListId, {
+            userLat: userLocation?.lat,
+            userLng: userLocation?.lng,
+            travelCostPerKm: 1.50,
+            maxDistanceKm: 10
+        });
 
         renderOptimizationResults(optimizationData);
 
@@ -377,7 +379,7 @@ async function runOptimization() {
         console.error('Optimization error:', error);
         results.innerHTML = `
             <div class="optimization-error">
-                <span>❌</span> Não foi possível otimizar. Tente novamente.
+                <span>❌</span> ${error.message || 'Não foi possível otimizar. Tente novamente.'}
             </div>
         `;
     } finally {
@@ -392,7 +394,7 @@ async function runOptimization() {
 function renderOptimizationResults(data) {
     const results = document.getElementById('optimization-results');
 
-    if (!data.singleStoreOptions || data.singleStoreOptions.length === 0) {
+    if (!data || !data.singleStoreOptions || data.singleStoreOptions.length === 0) {
         results.innerHTML = `
             <div class="optimization-empty">
                 Não encontramos preços para os itens da sua lista.
