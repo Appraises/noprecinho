@@ -112,7 +112,8 @@ export const auth = {
     logout() {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
-        window.location.href = '/index.html';
+        // Redirect to login instead of index for better UX within the app
+        window.location.href = '/login.html';
     },
 
     /**
@@ -121,7 +122,7 @@ export const auth = {
      */
     requireAuth() {
         if (!this.isAuthenticated()) {
-            window.location.href = '/login.html';
+            window.location.replace('/login.html');
         }
     },
 
@@ -134,11 +135,17 @@ export const auth = {
             const token = this.getToken();
             if (!token) return null;
 
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
             const response = await fetch(`${API_BASE}/auth/me`, {
                 headers: {
                     ...this.getAuthHeaders()
-                }
+                },
+                signal: controller.signal
             });
+
+            clearTimeout(id);
 
             if (!response.ok) {
                 if (response.status === 401) {
@@ -151,7 +158,11 @@ export const auth = {
             localStorage.setItem(USER_KEY, JSON.stringify(user));
             return user;
         } catch (error) {
-            console.error('Refresh user error:', error);
+            if (error.name === 'AbortError') {
+                console.warn('Refresh user timed out');
+            } else {
+                console.error('Refresh user error:', error);
+            }
             return null;
         }
     }

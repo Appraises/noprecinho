@@ -102,18 +102,20 @@ async function init() {
   // Initialize Theme
   initThemeToggle();
 
-  // Validate session and update User UI
-  let user = auth.getUser();
-  if (user) {
-    // Refresh user data (validates token)
-    auth.refreshUser().then(refreshedUser => {
-      if (refreshedUser) {
-        updateUserUI(refreshedUser);
-      }
-    });
+  // Initialize error boundary
+  initErrorBoundary();
 
-    updateUserUI(user);
-  }
+  // Initialize background tasks in parallel
+  const initPromises = [
+    initDB().catch(err => console.warn('IndexedDB failed:', err)),
+    isApiAvailable(3000).then(available => {
+      appState.useApi = available;
+      console.log(available ? '🌐 API available' : '📦 Using mock data');
+    }).catch(() => {
+      appState.useApi = false;
+      console.log('📦 Using mock data (check failed)');
+    })
+  ];
 
   function updateUserUI(userData) {
     const avatarBtn = document.getElementById('user-avatar');
@@ -134,24 +136,20 @@ async function init() {
     }
   }
 
-  // Initialize error boundary
-  initErrorBoundary();
-
-  // Initialize IndexedDB for offline support
-  try {
-    await initDB();
-  } catch (error) {
-    console.warn('IndexedDB initialization failed:', error);
+  // Validate session and update User UI
+  let user = auth.getUser();
+  if (user) {
+    updateUserUI(user);
+    initPromises.push(
+      auth.refreshUser().then(refreshedUser => {
+        if (refreshedUser) updateUserUI(refreshedUser);
+      })
+    );
   }
 
-  // Check API availability
-  try {
-    appState.useApi = await isApiAvailable();
-    console.log(appState.useApi ? '🌐 API available' : '📦 Using mock data');
-  } catch {
-    appState.useApi = false;
-    console.log('📦 Using mock data (API check failed)');
-  }
+  // Wait for critical background tasks if necessary, or just let them run
+  // For now, we don't want to block the map or UI initialization
+  Promise.all(initPromises);
 
   // Register service worker
   if ('serviceWorker' in navigator) {

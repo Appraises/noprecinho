@@ -324,11 +324,18 @@ export async function fetchUserProfile() {
 
 /**
  * Check if API is available
+ * @param {number} timeout - Timeout in milliseconds
  * @returns {Promise<boolean>}
  */
-export async function isApiAvailable() {
+export async function isApiAvailable(timeout = 5000) {
     try {
-        const response = await fetch(`${API_BASE.replace('/api', '')}/health`);
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+
+        const response = await fetch(`${API_BASE.replace('/api', '')}/health`, {
+            signal: controller.signal
+        });
+        clearTimeout(id);
         return response.ok;
     } catch {
         return false;
