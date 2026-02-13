@@ -4,6 +4,7 @@
  */
 
 import { api } from '../api.js';
+import { auth } from '../auth.js';
 
 let sidebarElement = null;
 let currentListId = null;
@@ -345,8 +346,28 @@ async function runOptimization() {
     results.innerHTML = '<div class="optimization-loading">Buscando melhores preços...</div>';
 
     try {
-        if (!currentListId) {
+        if (!auth.isAuthenticated()) {
             throw new Error('Você precisa estar logado para otimizar sua lista.');
+        }
+
+        if (!currentListId) {
+            console.log('No current list ID, attempting to load...');
+            await loadCurrentList();
+        }
+
+        if (!currentListId) {
+            console.log('Still no list ID, creating default list...');
+            try {
+                const newList = await api.createShoppingList({ name: 'Minha Lista' });
+                currentListId = newList.id;
+            } catch (e) {
+                console.error('Failed to auto-create list:', e);
+                throw new Error('Erro ao criar lista de compras. Tente novamente.');
+            }
+        }
+
+        if (!currentListId) {
+            throw new Error('Erro ao identificar sua lista de compras.');
         }
 
         optimizationData = await api.optimizeShoppingList(currentListId, {
