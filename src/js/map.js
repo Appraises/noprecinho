@@ -458,6 +458,60 @@ export async function showRouteToStore(store, userLocation) {
     }
 }
 
+// Show route with multiple stops
+export async function showMultiStopRoute(stops, userLocation) {
+    if (!mapInstance || !stops || stops.length === 0 || !userLocation) return null;
+
+    // Remove existing route
+    if (routeLayer) {
+        mapInstance.removeLayer(routeLayer);
+    }
+
+    try {
+        // Construct coordinates: user -> stop1 -> stop2...
+        const coords = [
+            `${userLocation.lng},${userLocation.lat}`,
+            ...stops.map(s => `${s.lng},${s.lat}`)
+        ].join(';');
+
+        const response = await fetch(
+            `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`
+        );
+        const data = await response.json();
+
+        if (data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+
+            // Draw route on map
+            routeLayer = L.geoJSON(route.geometry, {
+                style: {
+                    color: '#6C5CE7', // Different color for multi-stop
+                    weight: 6,
+                    opacity: 0.8,
+                    dashArray: '10, 10' // Dashed line to indicate multiple stops
+                }
+            }).addTo(mapInstance);
+
+            // Fit map to show entire route
+            mapInstance.fitBounds(routeLayer.getBounds(), {
+                padding: [50, 50]
+            });
+
+            return {
+                distance: route.distance,
+                duration: route.duration,
+                distanceText: formatDistance(route.distance),
+                durationText: formatDuration(route.duration)
+            };
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Multi-stop routing error:', error);
+        return null;
+    }
+}
+
 // Clear route from map
 export function clearRoute() {
     if (routeLayer) {

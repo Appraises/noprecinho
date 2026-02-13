@@ -10,10 +10,13 @@ import {
     addShoppingListItem,
     updateShoppingListItem,
     deleteShoppingListItem,
-    deleteShoppingList
+    deleteShoppingList,
+    fetchCatalogProducts
 } from '../api.js';
 import { showToast } from './toast.js';
 import { showError, createSkeletonCards } from './loadingUI.js';
+import { selectStore, showRouteToStore, showMultiStopRoute, updateRouteInfo, getUserLocation } from '../map.js';
+import { showStorePreview } from './storePreview.js';
 
 let listPanel = null;
 let currentListId = null;
@@ -184,19 +187,52 @@ async function loadListDetail(listId) {
                 </ul>
                 
                 <div class="shopping-add-item">
-                    <input type="text" id="new-item-input" placeholder="Adicionar item..." class="form-input">
+                    <div class="autocomplete-container">
+                        <input type="text" id="new-item-input" placeholder="Adicionar item..." class="form-input" autocomplete="off">
+                        <div id="autocomplete-results" class="autocomplete-results hidden"></div>
+                    </div>
                     <button class="btn btn--primary" id="add-item-btn">+</button>
                 </div>
                 
                 ${list.stats?.bestStores?.length ? `
                     <div class="shopping-best-stores">
-                        <h4>🏆 Melhores lojas para esta lista:</h4>
-                        ${list.stats.bestStores.slice(0, 3).map(s => `
-                            <div class="best-store-item">
-                                <strong>${s.store.name}</strong>
-                                <span>${s.items} itens · R$ ${s.total.toFixed(2).replace('.', ',')}</span>
+                        <h4>🏆 Melhores opções para economizar:</h4>
+                        
+                        ${list.stats.twoStoreSplit ? `
+                            <div class="split-card">
+                                <div class="split-card__header">
+                                    <span class="split-card__badge">MELHOR DIVISÃO</span>
+                                    <span class="split-card__savings">Economia de R$ ${(list.stats.totalEstimate - list.stats.twoStoreSplit.total).toFixed(2).replace('.', ',')}</span>
+                                </div>
+                                <div class="split-card__stores">
+                                    <div class="split-store">
+                                        <strong>${list.stats.twoStoreSplit.store1.name}</strong>
+                                        <small>${list.stats.twoStoreSplit.items1.length} itens</small>
+                                    </div>
+                                    <div class="split-divider">→</div>
+                                    <div class="split-store">
+                                        <strong>${list.stats.twoStoreSplit.store2.name}</strong>
+                                        <small>${list.stats.twoStoreSplit.items2.length} itens</small>
+                                    </div>
+                                </div>
+                                <div class="split-card__total">
+                                    Total: <strong>R$ ${list.stats.twoStoreSplit.total.toFixed(2).replace('.', ',')}</strong>
+                                </div>
+                                <button class="btn btn--primary btn--block btn--sm trace-multi-route-btn">Traçar Rota Completa</button>
                             </div>
-                        `).join('')}
+                        ` : ''}
+
+                        <div class="best-stores-list">
+                            ${list.stats.bestStores.slice(0, 3).map(s => `
+                                <div class="best-store-item" data-store-id="${s.store.id}">
+                                    <div class="best-store-info">
+                                        <strong>${s.store.name}</strong>
+                                        <span>${s.items} itens · R$ ${s.total.toFixed(2).replace('.', ',')}</span>
+                                    </div>
+                                    <button class="btn btn--sm btn--primary trace-route-btn">Traçar Rota</button>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                 ` : ''}
             </div>
@@ -209,8 +245,52 @@ async function loadListDetail(listId) {
         });
 
         content.querySelector('#add-item-btn').addEventListener('click', handleAddItem);
-        content.querySelector('#new-item-input').addEventListener('keypress', (e) => {
+
+        const itemInput = content.querySelector('#new-item-input');
+        const resultsEl = content.querySelector('#autocomplete-results');
+
+        itemInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') handleAddItem();
+        });
+
+        itemInput.addEventListener('input', async (e) => {
+            const query = e.target.value.trim();
+            if (query.length < 2) {
+                resultsEl.classList.add('hidden');
+                return;
+            }
+
+            try {
+                const products = await fetchCatalogProducts(query);
+                if (products.length > 0) {
+                    resultsEl.innerHTML = products.map(p => `
+                        <div class="autocomplete-item" data-name="${p.name}">
+                            <span class="autocomplete-item__icon">📦</span>
+                            <span class="autocomplete-item__name">${p.name}</span>
+                        </div>
+                    `).join('');
+                    resultsEl.classList.remove('hidden');
+
+                    resultsEl.querySelectorAll('.autocomplete-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            itemInput.value = item.dataset.name;
+                            resultsEl.classList.add('hidden');
+                            handleAddItem();
+                        });
+                    });
+                } else {
+                    resultsEl.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Autocomplete error:', error);
+            }
+        });
+
+        // Close autocomplete when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!itemInput.contains(e.target) && !resultsEl.contains(e.target)) {
+                resultsEl.classList.add('hidden');
+            }
         });
 
         // Item checkboxes
@@ -229,6 +309,68 @@ async function loadListDetail(listId) {
                 loadListDetail(listId);
             });
         });
+
+        // Trace Route buttons
+        content.querySelectorAll('.trace-route-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const storeId = e.target.closest('.best-store-item').dataset.storeId;
+                const bestStoreData = list.stats.bestStores.find(s => s.store.id === storeId);
+
+                if (bestStoreData && bestStoreData.store) {
+                    const store = bestStoreData.store;
+                    const userLocation = getUserLocation();
+
+                    // Highlight on map
+                    selectStore(store.id);
+                    showStorePreview(store);
+
+                    // Show route if location available
+                    if (userLocation) {
+                        const routeInfo = await showRouteToStore(store, userLocation);
+                        if (routeInfo) {
+                            updateRouteInfo(routeInfo);
+                            showToast('success', '🚗 Rota traçada!', `Melhor caminho para ${store.name} encontrado.`);
+                        }
+                    } else {
+                        showToast('info', 'Localização', 'Ative sua localização para traçar a rota.');
+                    }
+
+                    // Close panel to see the map
+                    closeShoppingPanel();
+                }
+            });
+        });
+
+        // Trace Multi-Stop Route button
+        const multiRouteBtn = content.querySelector('.trace-multi-route-btn');
+        if (multiRouteBtn) {
+            multiRouteBtn.addEventListener('click', async () => {
+                const split = list.stats.twoStoreSplit;
+                const userLocation = getUserLocation();
+
+                if (split && userLocation) {
+                    const stops = [split.store1, split.store2];
+
+                    // Show route on map
+                    const routeInfo = await showMultiStopRoute(stops, userLocation);
+
+                    if (routeInfo) {
+                        updateRouteInfo(routeInfo);
+                        showToast('success', '🗺️ Rota multi-lojas traçada!', `Total: ${routeInfo.distanceText}, ${routeInfo.durationText}`);
+                    }
+
+                    // Show message about what to buy where
+                    setTimeout(() => {
+                        showToast('info', 'O que comprar em cada:',
+                            `${split.store1.name}: ${split.items1.length} itens\n${split.store2.name}: ${split.items2.length} itens`);
+                    }, 2000);
+
+                    closeShoppingPanel();
+                } else if (!userLocation) {
+                    showToast('info', 'Localização', 'Ative sua localização para traçar a rota.');
+                }
+            });
+        }
 
     } catch (error) {
         console.error('Load list detail error:', error);
@@ -474,9 +616,32 @@ function addShoppingPanelStyles() {
         
         .best-store-item {
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            padding: 0.5rem 0;
+            padding: 0.75rem 0;
             border-bottom: 1px solid var(--color-border);
+            gap: 1rem;
+        }
+        
+        .best-store-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .best-store-info strong {
+            font-size: 0.9375rem;
+            color: var(--color-text);
+        }
+
+        .best-store-info span {
+            font-size: 0.8125rem;
+            color: var(--color-text-secondary);
+        }
+
+        .trace-route-btn {
+            white-space: nowrap;
         }
         
         .best-store-item:last-child {
@@ -485,6 +650,122 @@ function addShoppingPanelStyles() {
         
         .shopping-back {
             margin-bottom: 1rem;
+        }
+
+        .autocomplete-container {
+            position: relative;
+            flex: 1;
+        }
+
+        .autocomplete-results {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1002;
+            margin-bottom: 0.5rem;
+        }
+
+        .autocomplete-item {
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .autocomplete-item:hover {
+            background: var(--color-surface-hover);
+        }
+
+        .autocomplete-item__icon {
+            font-size: 1rem;
+        }
+
+        .autocomplete-item__name {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .split-card {
+            background: var(--color-surface-elevated);
+            border: 1px solid var(--color-primary);
+            border-radius: var(--radius-lg);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .split-card__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .split-card__badge {
+            background: var(--color-primary);
+            color: white;
+            font-size: 0.625rem;
+            font-weight: 700;
+            padding: 0.125rem 0.5rem;
+            border-radius: var(--radius-full);
+            text-transform: uppercase;
+        }
+
+        .split-card__savings {
+            font-size: 0.75rem;
+            color: var(--color-success);
+            font-weight: 600;
+        }
+
+        .split-card__stores {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .split-store {
+            flex: 1;
+        }
+
+        .split-store strong {
+            display: block;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .split-store small {
+            font-size: 0.75rem;
+            color: var(--color-text-secondary);
+        }
+
+        .split-divider {
+            color: var(--color-primary);
+            font-weight: 700;
+            padding: 0 0.5rem;
+        }
+
+        .split-card__total {
+            text-align: center;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .best-stores-list {
+            display: flex;
+            flex-direction: column;
         }
     `;
     document.head.appendChild(style);
