@@ -464,6 +464,9 @@ async function refreshData() {
       const stores = storesResponse.data || storesResponse;
       const prices = pricesResponse.data || pricesResponse;
 
+      console.log('Fetched stores:', stores ? stores.length : 'null');
+      console.log('Fetched prices:', prices ? prices.length : 'null');
+
       appState.stores = stores;
       appState.prices = prices;
       if (appState.stores) setStores(appState.stores);

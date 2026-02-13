@@ -283,46 +283,75 @@ export async function searchAddress(query) {
 
 // Add store markers to the map
 export function addStoreMarkers(map, stores, onStoreClick) {
-    if (!map || !markersLayer) return;
+    console.log('addStoreMarkers called with:', {
+        map: !!map,
+        markersLayer: !!markersLayer,
+        storesCount: stores ? stores.length : 'null'
+    });
+
+    if (!map || !markersLayer) {
+        console.warn('Map or markersLayer not initialized');
+        return;
+    }
+
+    if (!stores || !Array.isArray(stores)) {
+        console.warn('Invalid stores data:', stores);
+        return;
+    }
 
     // Clear existing markers
-    markersLayer.clearLayers();
-    storeMarkers = {};
+    try {
+        markersLayer.clearLayers();
+        storeMarkers = {};
+    } catch (e) {
+        console.error('Error clearing layers:', e);
+    }
 
     stores.forEach(store => {
-        const marker = L.marker([store.lat, store.lng], {
-            icon: createStoreMarker(store, store.id === selectedStoreId)
-        });
-
-        // Add tooltip
-        marker.bindTooltip(`
-      <div class="store-tooltip">
-        <div class="store-tooltip__name">${store.name}</div>
-        <div class="store-tooltip__category">${getCategoryLabel(store.category)}</div>
-        ${store.lowestPrice ? `
-          <div class="store-tooltip__price">
-            <span class="store-tooltip__price-value">R$ ${store.lowestPrice.toFixed(2).replace('.', ',')}</span>
-            <span class="store-tooltip__price-label">menor preço</span>
-          </div>
-        ` : ''}
-      </div>
-    `, {
-            direction: 'top',
-            offset: [0, -50],
-            className: 'store-marker-tooltip'
-        });
-
-        // Click handler
-        marker.on('click', (e) => {
-            L.DomEvent.stopPropagation(e);
-            if (onStoreClick) {
-                onStoreClick(store);
+        try {
+            if (!store.lat || !store.lng) {
+                console.warn('Store missing coordinates:', store);
+                return;
             }
-        });
 
-        storeMarkers[store.id] = marker;
-        markersLayer.addLayer(marker);
+            const marker = L.marker([store.lat, store.lng], {
+                icon: createStoreMarker(store, store.id === selectedStoreId)
+            });
+
+            // Add tooltip
+            marker.bindTooltip(`
+        <div class="store-tooltip">
+            <div class="store-tooltip__name">${store.name}</div>
+            <div class="store-tooltip__category">${getCategoryLabel(store.category)}</div>
+            ${store.lowestPrice ? `
+            <div class="store-tooltip__price">
+                <span class="store-tooltip__price-value">R$ ${store.lowestPrice.toFixed(2).replace('.', ',')}</span>
+                <span class="store-tooltip__price-label">menor preço</span>
+            </div>
+            ` : ''}
+        </div>
+        `, {
+                direction: 'top',
+                offset: [0, -50],
+                className: 'store-marker-tooltip'
+            });
+
+            // Click handler
+            marker.on('click', (e) => {
+                L.DomEvent.stopPropagation(e);
+                if (onStoreClick) {
+                    onStoreClick(store);
+                }
+            });
+
+            storeMarkers[store.id] = marker;
+            markersLayer.addLayer(marker);
+        } catch (err) {
+            console.error('Error adding marker for store:', store, err);
+        }
     });
+
+    console.log(`Added ${Object.keys(storeMarkers).length} markers to map`);
 }
 
 // Add markers grouped by category (for category-colored clusters)
