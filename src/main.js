@@ -19,7 +19,7 @@ import './css/reportModal.css';
 import './css/responsive.css';
 
 // Core modules
-import { initMap, centerOnUser, addStoreMarkers, selectStore, searchAndPanToStore, searchAddress, showRouteToStore, openDirections, getUserLocation } from './js/map.js';
+import { initMap, centerOnUser, addStoreMarkers, selectStore, searchAndPanToStore, searchAddress, showRouteToStore, clearRoute, openDirections, getUserLocation } from './js/map.js';
 import { formatDistance, getCategoryIcon, getCategoryLabel } from './js/utils/formatters.js';
 import { initFilters, getActiveCategories } from './js/ui/filters.js';
 import { initStorePreview, showStorePreview, hideStorePreview } from './js/ui/storePreview.js';
@@ -326,8 +326,20 @@ async function searchForProduct(productName) {
         // Open store details to show all products
         openStoreDetail(cheapestStore);
 
-        showToast('success', '💰 Menor preço encontrado!',
-          `R$ ${cheapestPrice.price.toFixed(2).replace('.', ',')} em ${cheapestStore.name}`);
+        // Show route to cheapest store if user location is available
+        if (appState.userLocation) {
+          const routeInfo = await showRouteToStore(cheapestStore, appState.userLocation);
+          if (routeInfo) {
+            showToast('success', '💰 Menor preço encontrado!',
+              `R$ ${cheapestPrice.price.toFixed(2).replace('.', ',')} em ${cheapestStore.name} — ${routeInfo.distanceText}, ${routeInfo.durationText}`);
+          } else {
+            showToast('success', '💰 Menor preço encontrado!',
+              `R$ ${cheapestPrice.price.toFixed(2).replace('.', ',')} em ${cheapestStore.name}`);
+          }
+        } else {
+          showToast('success', '💰 Menor preço encontrado!',
+            `R$ ${cheapestPrice.price.toFixed(2).replace('.', ',')} em ${cheapestStore.name}`);
+        }
       } else {
         showToast('success', 'Resultados encontrados', `${prices.length} preço(s) em ${storesWithProduct.length} loja(s)`);
       }
@@ -373,6 +385,9 @@ function clearProductSearch() {
   // Hide clear button
   const clearBtn = document.getElementById('search-clear');
   if (clearBtn) clearBtn.classList.add('hidden');
+
+  // Remove route from map
+  clearRoute();
 
   refreshData();
 }
