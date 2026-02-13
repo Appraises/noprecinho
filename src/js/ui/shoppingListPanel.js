@@ -15,8 +15,8 @@ import {
 } from '../api.js';
 import { showToast } from './toast.js';
 import { showError, createSkeletonCards } from './loadingUI.js';
-import { selectStore, showRouteToStore, showMultiStopRoute, updateRouteInfo, getUserLocation, showShoppingIndicators, clearShoppingIndicators } from '../map.js';
-import { showStorePreview } from './storePreview.js';
+import { selectStore, showRouteToStore, showMultiStopRoute, getUserLocation, showShoppingIndicators, clearShoppingIndicators } from '../map.js';
+import { showStorePreview, updateRouteInfo } from './storePreview.js';
 
 let listPanel = null;
 let currentListId = null;
