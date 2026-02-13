@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet.markercluster';
 import { stores as storeData } from './data/mockData.js';
 
+let mapInstance = null;
 let markersLayer = null;
 let categoryLayers = {};
 let routeLayer = null;
