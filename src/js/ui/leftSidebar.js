@@ -50,7 +50,10 @@ function createSidebar() {
         <div class="left-sidebar__content">
             <!-- Quick Add -->
             <div class="quick-add">
-                <input type="text" id="quick-add-input" class="quick-add__input" placeholder="Adicionar item...">
+                <div class="autocomplete-container">
+                    <input type="text" id="quick-add-input" class="quick-add__input" placeholder="Adicionar item..." autocomplete="off">
+                    <div id="quick-add-autocomplete" class="autocomplete-results hidden"></div>
+                </div>
                 <button class="quick-add__btn" id="quick-add-btn">+</button>
             </div>
             
@@ -104,6 +107,47 @@ function bindEvents() {
         if (e.key === 'Enter') addItem(quickAddInput.value);
     });
 
+    // Autocomplete for quick add
+    const autocompleteEl = document.getElementById('quick-add-autocomplete');
+    quickAddInput.addEventListener('input', async (e) => {
+        const query = e.target.value.trim();
+        if (query.length < 2) {
+            autocompleteEl.classList.add('hidden');
+            return;
+        }
+
+        try {
+            const products = await api.fetchCatalogProducts(query);
+            if (products && products.length > 0) {
+                autocompleteEl.innerHTML = products.map(p => `
+                    <div class="autocomplete-item" data-name="${p.name}">
+                        <span class="autocomplete-item__name">${p.name}</span>
+                    </div>
+                `).join('');
+                autocompleteEl.classList.remove('hidden');
+
+                autocompleteEl.querySelectorAll('.autocomplete-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        quickAddInput.value = item.dataset.name;
+                        autocompleteEl.classList.add('hidden');
+                        addItem(quickAddInput.value);
+                    });
+                });
+            } else {
+                autocompleteEl.classList.add('hidden');
+            }
+        } catch (error) {
+            console.error('Quick add autocomplete error:', error);
+        }
+    });
+
+    // Close autocomplete on click outside
+    document.addEventListener('click', (e) => {
+        if (!quickAddInput.contains(e.target) && !autocompleteEl.contains(e.target)) {
+            autocompleteEl.classList.add('hidden');
+        }
+    });
+
     // Optimize button
     document.getElementById('optimize-btn').addEventListener('click', runOptimization);
     document.getElementById('refresh-optimization').addEventListener('click', runOptimization);
@@ -153,7 +197,7 @@ export function toggleSidebar() {
  */
 async function loadCurrentList() {
     try {
-        const lists = await api.getShoppingLists();
+        const lists = await api.fetchShoppingLists();
 
         if (lists && lists.length > 0) {
             // Use the most recent active list
@@ -305,34 +349,9 @@ async function runOptimization() {
             optimizationData = await api.optimizeShoppingList(currentListId, {
                 userLat: userLocation?.lat,
                 userLng: userLocation?.lng,
-                travelCostPerKm: 1.50, // R$ 1.50 per km for fuel
+                travelCostPerKm: 1.50,
                 maxDistanceKm: 10
             });
-        } else {
-            // Mock data for demo
-            optimizationData = {
-                recommendation: 'split',
-                singleStoreOptions: [
-                    { store: { name: 'Extra', id: '1' }, total: 52.00, effectiveTotal: 55.00, distanceKm: 2, travelCost: 3.00, itemsFound: 4 },
-                    { store: { name: 'Atacadão', id: '2' }, total: 48.50, effectiveTotal: 57.50, distanceKm: 6, travelCost: 9.00, itemsFound: 4 }
-                ],
-                twoStoreSplit: {
-                    storeA: { name: 'Atacadão', id: '2' },
-                    storeB: { name: 'Extra', id: '1' },
-                    storeAItems: [{ productName: 'Arroz 5kg', price: 23.00 }, { productName: 'Feijão 1kg', price: 7.50 }],
-                    storeBItems: [{ productName: 'Óleo', price: 6.00 }, { productName: 'Açúcar', price: 4.50 }],
-                    storeATotal: 30.50,
-                    storeBTotal: 10.50,
-                    combinedTotal: 41.00,
-                    travelCost: 6.00,
-                    effectiveTotal: 47.00,
-                    totalDistanceKm: 4,
-                    routeDescription: 'Você → Extra → Atacadão → Você',
-                    savings: 7.50,
-                    savingsPercent: 15,
-                    netSavings: 8.00
-                }
-            };
         }
 
         renderOptimizationResults(optimizationData);
@@ -410,35 +429,42 @@ function renderOptimizationResults(data) {
     // Two store split (if recommended)
     if (data.twoStoreSplit && data.recommendation === 'split') {
         const split = data.twoStoreSplit;
+        const storeA = split.store1 || split.storeA;
+        const storeB = split.store2 || split.storeB;
+        const itemsA = split.items1 || split.storeAItems || [];
+        const itemsB = split.items2 || split.storeBItems || [];
+        const totalA = split.total1 || split.storeATotal || 0;
+        const totalB = split.total2 || split.storeBTotal || 0;
+
         const hasRoute = split.routeDescription && split.totalDistanceKm > 0;
         html += `
             <div class="split-recommendation">
                 <div class="split-recommendation__header">
                     <span>⭐ Melhor opção (2 lojas)</span>
-                    <span class="split-recommendation__badge">Economize ${split.savingsPercent}%</span>
+                    <span class="split-recommendation__badge">Economize ${split.savingsPercent || 0}%</span>
                 </div>
                 ${hasRoute ? `<div class="split-route">🚗 ${split.routeDescription} (${split.totalDistanceKm} km)</div>` : ''}
                 <div class="split-recommendation__stores">
-                    <div class="split-store" data-store-id="${split.storeA.id}">
-                        <div class="split-store__name">${split.storeA.name}</div>
-                        <div class="split-store__items">${split.storeAItems.map(i => i.productName).join(', ')}</div>
-                        <div class="split-store__total">R$ ${split.storeATotal.toFixed(2).replace('.', ',')}</div>
+                    <div class="split-store" data-store-id="${storeA.id}">
+                        <div class="split-store__name">${storeA.name}</div>
+                        <div class="split-store__items">${itemsA.map(i => i.productName || i.name).join(', ')}</div>
+                        <div class="split-store__total">R$ ${totalA.toFixed(2).replace('.', ',')}</div>
                     </div>
                     <div class="split-divider">+</div>
-                    <div class="split-store" data-store-id="${split.storeB.id}">
-                        <div class="split-store__name">${split.storeB.name}</div>
-                        <div class="split-store__items">${split.storeBItems.map(i => i.productName).join(', ')}</div>
-                        <div class="split-store__total">R$ ${split.storeBTotal.toFixed(2).replace('.', ',')}</div>
+                    <div class="split-store" data-store-id="${storeB.id}">
+                        <div class="split-store__name">${storeB.name}</div>
+                        <div class="split-store__items">${itemsB.map(i => i.productName || i.name).join(', ')}</div>
+                        <div class="split-store__total">R$ ${totalB.toFixed(2).replace('.', ',')}</div>
                     </div>
                 </div>
                 <div class="split-recommendation__footer">
                     <div class="split-total">
                         <span>Total:</span>
-                        <span class="split-total__value">R$ ${split.combinedTotal.toFixed(2).replace('.', ',')}</span>
-                        ${split.travelCost > 0 ? `<span class="split-total__travel">+ R$ ${split.travelCost.toFixed(2).replace('.', ',')} combustível</span>` : ''}
+                        <span class="split-total__value">R$ ${(split.combinedTotal || split.total || 0).toFixed(2).replace('.', ',')}</span>
+                        ${(split.travelCost || 0) > 0 ? `<span class="split-total__travel">+ R$ ${split.travelCost.toFixed(2).replace('.', ',')} combustível</span>` : ''}
                     </div>
                     <div class="split-savings">
-                        Economia líquida: <strong>R$ ${(split.netSavings || split.savings).toFixed(2).replace('.', ',')}</strong>
+                        Economia líquida: <strong>R$ ${(split.netSavings || split.savings || 0).toFixed(2).replace('.', ',')}</strong>
                     </div>
                 </div>
                 <button class="btn btn--secondary btn--block" id="show-on-map-btn">
@@ -454,11 +480,17 @@ function renderOptimizationResults(data) {
     const mapBtn = document.getElementById('show-on-map-btn');
     if (mapBtn && onHighlightStores) {
         mapBtn.addEventListener('click', () => {
-            if (data.twoStoreSplit) {
+            const split = data.twoStoreSplit;
+            if (split) {
+                const storeA = split.store1 || split.storeA;
+                const storeB = split.store2 || split.storeB;
+                const itemsA = split.items1 || split.storeAItems || [];
+                const itemsB = split.items2 || split.storeBItems || [];
+
                 onHighlightStores({
                     stops: [
-                        { store: data.twoStoreSplit.storeA, items: data.twoStoreSplit.storeAItems },
-                        { store: data.twoStoreSplit.storeB, items: data.twoStoreSplit.storeBItems }
+                        { store: storeA, items: itemsA },
+                        { store: storeB, items: itemsB }
                     ]
                 });
             }
@@ -485,8 +517,13 @@ function renderOptimizationResults(data) {
             const storeId = el.dataset.storeId;
             const split = data.twoStoreSplit;
             if (split && onHighlightStores) {
-                const store = split.storeA.id === storeId ? split.storeA : split.storeB;
-                const items = split.storeA.id === storeId ? split.storeAItems : split.storeBItems;
+                const storeA = split.store1 || split.storeA;
+                const storeB = split.store2 || split.storeB;
+                const itemsA = split.items1 || split.storeAItems || [];
+                const itemsB = split.items2 || split.storeBItems || [];
+
+                const store = storeA.id === storeId ? storeA : storeB;
+                const items = storeA.id === storeId ? itemsA : itemsB;
                 onHighlightStores({
                     stops: [{ store, items }]
                 });
