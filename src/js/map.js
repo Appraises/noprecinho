@@ -524,12 +524,15 @@ export async function showMultiStopRoute(stops, userLocation) {
         mapInstance.removeLayer(routeLayer);
     }
 
+    // Build waypoints: user -> stop1 -> stop2...
+    const waypoints = [
+        [userLocation.lat, userLocation.lng],
+        ...stops.map(s => [s.lat, s.lng])
+    ];
+
     try {
-        // Construct coordinates: user -> stop1 -> stop2...
-        const coords = [
-            `${userLocation.lng},${userLocation.lat}`,
-            ...stops.map(s => `${s.lng},${s.lat}`)
-        ].join(';');
+        // Construct coordinates for OSRM (lng,lat format)
+        const coords = waypoints.map(([lat, lng]) => `${lng},${lat}`).join(';');
 
         const response = await fetch(
             `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`
@@ -542,10 +545,10 @@ export async function showMultiStopRoute(stops, userLocation) {
             // Draw route on map
             routeLayer = L.geoJSON(route.geometry, {
                 style: {
-                    color: '#6C5CE7', // Different color for multi-stop
+                    color: '#6C5CE7',
                     weight: 6,
                     opacity: 0.8,
-                    dashArray: '10, 10' // Dashed line to indicate multiple stops
+                    dashArray: '10, 10'
                 }
             }).addTo(mapInstance);
 
@@ -562,11 +565,34 @@ export async function showMultiStopRoute(stops, userLocation) {
             };
         }
 
-        return null;
+        // OSRM returned no routes — fall through to fallback
+        console.warn('OSRM returned no routes, using fallback polyline');
     } catch (error) {
-        console.error('Multi-stop routing error:', error);
-        return null;
+        console.warn('OSRM routing failed, using fallback polyline:', error);
     }
+
+    // Fallback: draw straight polylines between waypoints
+    routeLayer = L.layerGroup();
+    for (let i = 0; i < waypoints.length - 1; i++) {
+        L.polyline([waypoints[i], waypoints[i + 1]], {
+            color: '#6C5CE7',
+            weight: 5,
+            opacity: 0.7,
+            dashArray: '10, 10'
+        }).addTo(routeLayer);
+    }
+    routeLayer.addTo(mapInstance);
+
+    // Fit map to show all waypoints
+    const bounds = L.latLngBounds(waypoints);
+    mapInstance.fitBounds(bounds, { padding: [50, 50] });
+
+    return {
+        distance: null,
+        duration: null,
+        distanceText: 'Rota aproximada',
+        durationText: ''
+    };
 }
 
 // Clear route from map
@@ -575,6 +601,27 @@ export function clearRoute() {
         mapInstance.removeLayer(routeLayer);
         routeLayer = null;
     }
+}
+
+// Hide all store markers EXCEPT the ones in the given ID set
+export function hideNonRouteMarkers(storeIds) {
+    if (!markersLayer) return;
+    const idsSet = new Set(storeIds);
+    Object.entries(storeMarkers).forEach(([id, marker]) => {
+        if (!idsSet.has(id)) {
+            markersLayer.removeLayer(marker);
+        }
+    });
+}
+
+// Restore all store markers back onto the map
+export function showAllMarkers() {
+    if (!markersLayer) return;
+    Object.values(storeMarkers).forEach(marker => {
+        if (!markersLayer.hasLayer(marker)) {
+            markersLayer.addLayer(marker);
+        }
+    });
 }
 
 // Open directions in external map app

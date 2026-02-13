@@ -19,7 +19,7 @@ import './css/reportModal.css';
 import './css/responsive.css';
 
 // Core modules
-import { initMap, centerOnUser, addStoreMarkers, selectStore, searchAndPanToStore, searchAddress, showRouteToStore, showMultiStopRoute, clearRoute, openDirections, getUserLocation, showShoppingIndicators, clearShoppingIndicators } from './js/map.js';
+import { initMap, centerOnUser, addStoreMarkers, selectStore, searchAndPanToStore, searchAddress, showRouteToStore, showMultiStopRoute, clearRoute, openDirections, getUserLocation, showShoppingIndicators, clearShoppingIndicators, hideNonRouteMarkers, showAllMarkers } from './js/map.js';
 import { formatDistance, getCategoryIcon, getCategoryLabel } from './js/utils/formatters.js';
 import { initFilters, getActiveCategories } from './js/ui/filters.js';
 import { initStorePreview, showStorePreview, hideStorePreview, updateRouteInfo } from './js/ui/storePreview.js';
@@ -222,10 +222,15 @@ async function init() {
       // Clear previous labels and routes
       clearShoppingIndicators();
       clearRoute();
+      showAllMarkers(); // Restore all markers first
 
       if (options.stops && options.stops.length > 0) {
         // Show labels above stores
         showShoppingIndicators(options.stops);
+
+        // Hide markers not part of the route
+        const routeStoreIds = options.stops.map(s => (s.store || s).id);
+        hideNonRouteMarkers(routeStoreIds);
 
         // Trace route
         if (options.stops.length === 1) {
