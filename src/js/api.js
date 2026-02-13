@@ -31,6 +31,9 @@ async function apiRequest(endpoint, options = {}) {
     const data = await response.json();
 
     if (!response.ok) {
+        if (response.status === 401) {
+            auth.logout();
+        }
         throw new Error(data.error || `API error: ${response.status}`);
     }
 

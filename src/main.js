@@ -102,26 +102,35 @@ async function init() {
   // Initialize Theme
   initThemeToggle();
 
-  // Update User UI
-  const user = auth.getUser();
+  // Validate session and update User UI
+  let user = auth.getUser();
   if (user) {
+    // Refresh user data (validates token)
+    auth.refreshUser().then(refreshedUser => {
+      if (refreshedUser) {
+        updateUserUI(refreshedUser);
+      }
+    });
+
+    updateUserUI(user);
+  }
+
+  function updateUserUI(userData) {
     const avatarBtn = document.getElementById('user-avatar');
     if (avatarBtn) {
-      if (user.avatar) {
-        avatarBtn.innerHTML = `<img src="${user.avatar}" alt="${user.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+      if (userData.avatar) {
+        avatarBtn.innerHTML = `<img src="${userData.avatar}" alt="${userData.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
       } else {
-        // Fallback to user initial letter
-        const initial = (user.name || user.email || 'U').charAt(0).toUpperCase();
+        const initial = (userData.name || userData.email || 'U').charAt(0).toUpperCase();
         avatarBtn.innerHTML = `<span>${initial}</span>`;
       }
-      avatarBtn.title = user.name;
+      avatarBtn.title = userData.name;
 
-      // Add logout option on click (simple implementation)
-      avatarBtn.addEventListener('click', () => {
-        if (confirm(`Log out as ${user.name}?`)) {
+      avatarBtn.onclick = () => {
+        if (confirm(`Log out as ${userData.name}?`)) {
           auth.logout();
         }
-      });
+      };
     }
   }
 

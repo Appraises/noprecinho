@@ -54,17 +54,26 @@ export const auth = {
      */
 
     async login(email, password) {
-        // Mock login - allow any credentials
-        const mockUser = {
-            id: 'mock-user-id',
-            name: email.split('@')[0],
-            email: email
-        };
-        const mockToken = 'mock-jwt-token';
+        try {
+            const response = await fetch(`${API_BASE}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
 
-        localStorage.setItem(TOKEN_KEY, mockToken);
-        localStorage.setItem(USER_KEY, JSON.stringify(mockUser));
-        return true;
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Erro ao fazer login');
+            }
+
+            localStorage.setItem(TOKEN_KEY, data.token);
+            localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+            return true;
+        } catch (error) {
+            console.error('Login error:', error);
+            throw error;
+        }
     },
 
     /**
@@ -75,17 +84,26 @@ export const auth = {
      * @returns {Promise<boolean>}
      */
     async signup(name, email, password) {
-        // Mock signup - accept any data
-        const mockUser = {
-            id: 'mock-user-id',
-            name: name,
-            email: email
-        };
-        const mockToken = 'mock-jwt-token';
+        try {
+            const response = await fetch(`${API_BASE}/auth/signup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            });
 
-        localStorage.setItem(TOKEN_KEY, mockToken);
-        localStorage.setItem(USER_KEY, JSON.stringify(mockUser));
-        return true;
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Erro ao criar conta');
+            }
+
+            localStorage.setItem(TOKEN_KEY, data.token);
+            localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+            return true;
+        } catch (error) {
+            console.error('Signup error:', error);
+            throw error;
+        }
     },
 
     /**
@@ -112,7 +130,29 @@ export const auth = {
      * @returns {Promise<Object|null>}
      */
     async refreshUser() {
-        // Mock refresh - just return stored user
-        return this.getUser();
+        try {
+            const token = this.getToken();
+            if (!token) return null;
+
+            const response = await fetch(`${API_BASE}/auth/me`, {
+                headers: {
+                    ...this.getAuthHeaders()
+                }
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    this.logout();
+                }
+                return null;
+            }
+
+            const user = await response.json();
+            localStorage.setItem(USER_KEY, JSON.stringify(user));
+            return user;
+        } catch (error) {
+            console.error('Refresh user error:', error);
+            return null;
+        }
     }
 };
