@@ -633,7 +633,6 @@ function renderOptimizationResults(data) {
     results.querySelectorAll('.split-store').forEach(el => {
         el.addEventListener('click', (e) => {
             e.stopPropagation();
-            const storeId = el.dataset.storeId;
             const split = data.twoStoreSplit;
             if (split && onHighlightStores) {
                 const storeA = split.store1 || split.storeA;
@@ -641,12 +640,33 @@ function renderOptimizationResults(data) {
                 const itemsA = split.items1 || split.storeAItems || [];
                 const itemsB = split.items2 || split.storeBItems || [];
 
-                const store = storeA.id === storeId ? storeA : storeB;
-                const items = storeA.id === storeId ? itemsA : itemsB;
-                onHighlightStores({
-                    stops: [{ store, items }]
-                });
+                const getDist = (lat1, lon1, lat2, lon2) => {
+                    const R = 6371;
+                    const dLat = (lat2 - lat1) * Math.PI / 180;
+                    const dLon = (lon2 - lon1) * Math.PI / 180;
+                    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    return R * c;
+                };
+
+                let stops = [
+                    { store: storeA, items: itemsA },
+                    { store: storeB, items: itemsB }
+                ];
+
+                if (userLocation) {
+                    stops.sort((a, b) => {
+                        const distA = getDist(userLocation.lat, userLocation.lng, a.store.lat, a.store.lng);
+                        const distB = getDist(userLocation.lat, userLocation.lng, b.store.lat, b.store.lng);
+                        return distA - distB;
+                    });
+                }
+
+                onHighlightStores({ stops });
             }
+            if (window.innerWidth < 768) closeSidebar();
         });
     });
 }
