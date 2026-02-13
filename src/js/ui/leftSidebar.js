@@ -241,7 +241,7 @@ function renderItems(items) {
             <span class="items-list__name">${item.productName}</span>
             <span class="items-list__qty">${item.quantity > 1 ? `x${item.quantity}` : ''}</span>
             ${item.bestPrice ? `<span class="items-list__price">R$ ${item.bestPrice.toFixed(2).replace('.', ',')}</span>` : ''}
-            <button class="items-list__delete" data-name="${item.productName}">&times;</button>
+            <button class="items-list__delete" data-id="${item.id}" data-name="${item.productName}">&times;</button>
         </li>
     `).join('');
 
@@ -249,7 +249,7 @@ function renderItems(items) {
     listEl.querySelectorAll('.items-list__delete').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            removeItem(btn.dataset.name);
+            removeItem(btn.dataset.id, btn.dataset.name);
         });
     });
 
@@ -300,13 +300,19 @@ async function addItem(name) {
 /**
  * Remove item from list
  */
-async function removeItem(name) {
+async function removeItem(id, name) {
     try {
-        // For now, use local fallback
-        const items = JSON.parse(localStorage.getItem('precoja_shopping_list') || '[]');
-        const filtered = items.filter(i => i.productName !== name);
-        localStorage.setItem('precoja_shopping_list', JSON.stringify(filtered));
-        renderItems(filtered);
+        if (currentListId && id) {
+            // Remove from server
+            await api.deleteShoppingListItem(currentListId, id);
+            await loadCurrentList();
+        } else {
+            // Local fallback
+            const items = JSON.parse(localStorage.getItem('precoja_shopping_list') || '[]');
+            const filtered = items.filter(i => i.productName !== name);
+            localStorage.setItem('precoja_shopping_list', JSON.stringify(filtered));
+            renderItems(filtered);
+        }
 
         // Clear optimization results
         document.getElementById('optimization-section').hidden = true;
