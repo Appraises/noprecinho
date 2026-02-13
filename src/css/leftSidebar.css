@@ -268,13 +268,14 @@
 
 .store-option {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: 0.375rem;
     padding: 0.625rem 0.75rem;
     background: var(--color-background);
     border-radius: 8px;
     margin-bottom: 0.375rem;
     transition: background 0.2s;
+    cursor: pointer;
 }
 
 .store-option:hover {
@@ -289,6 +290,13 @@
 .store-option__name {
     flex: 1;
     font-size: 0.9375rem;
+}
+
+.store-option__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
 }
 
 .store-option__main {
@@ -323,6 +331,30 @@
 .store-option__missing {
     font-size: 0.75rem;
     color: var(--color-text-secondary);
+}
+
+.store-option__items {
+    width: 100%;
+    border-top: 1px solid var(--color-border);
+    padding-top: 0.375rem;
+    margin-top: 0.125rem;
+}
+
+.store-option__item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.1875rem 0;
+    font-size: 0.8125rem;
+}
+
+.store-option__item-name {
+    color: var(--color-text-secondary);
+}
+
+.store-option__item-price {
+    font-weight: 500;
+    color: var(--color-primary);
 }
 
 /* Split Route */
@@ -392,6 +424,19 @@
     color: var(--color-text-secondary);
     margin-bottom: 0.5rem;
     line-height: 1.4;
+}
+
+.split-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.125rem 0;
+}
+
+.split-item__price {
+    font-weight: 500;
+    color: var(--color-primary);
+    font-size: 0.75rem;
 }
 
 .split-store__total {

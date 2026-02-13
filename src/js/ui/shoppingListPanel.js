@@ -20,6 +20,7 @@ import { showStorePreview } from './storePreview.js';
 
 let listPanel = null;
 let currentListId = null;
+let selectedProduct = null; // Track valid product selected from autocomplete
 
 /**
  * Initialize shopping list panel
@@ -253,8 +254,11 @@ async function loadListDetail(listId) {
             if (e.key === 'Enter') handleAddItem();
         });
 
+        // Reset selectedProduct when user types manually
         itemInput.addEventListener('input', async (e) => {
             const query = e.target.value.trim();
+            selectedProduct = null; // Reset on manual typing
+
             if (query.length < 2) {
                 resultsEl.classList.add('hidden');
                 return;
@@ -274,12 +278,18 @@ async function loadListDetail(listId) {
                     resultsEl.querySelectorAll('.autocomplete-item').forEach(item => {
                         item.addEventListener('click', () => {
                             itemInput.value = item.dataset.name;
+                            selectedProduct = item.dataset.name; // Mark as valid selection
                             resultsEl.classList.add('hidden');
                             handleAddItem();
                         });
                     });
                 } else {
-                    resultsEl.classList.add('hidden');
+                    resultsEl.innerHTML = `
+                        <div class="autocomplete-empty">
+                            <span>❌ Produto não encontrado no catálogo</span>
+                        </div>
+                    `;
+                    resultsEl.classList.remove('hidden');
                 }
             } catch (error) {
                 console.error('Autocomplete error:', error);
@@ -444,9 +454,16 @@ async function handleAddItem() {
 
     if (!productName) return;
 
+    // Validate: only allow products selected from autocomplete
+    if (!selectedProduct || selectedProduct !== productName) {
+        showToast('warning', 'Produto não encontrado', 'Selecione um produto da lista de sugestões.');
+        return;
+    }
+
     try {
         await addShoppingListItem(currentListId, { productName });
         input.value = '';
+        selectedProduct = null;
         loadListDetail(currentListId);
     } catch (error) {
         showError('Erro ao adicionar item');
@@ -710,6 +727,13 @@ function addShoppingPanelStyles() {
         .autocomplete-item__name {
             font-size: 0.875rem;
             font-weight: 500;
+        }
+
+        .autocomplete-empty {
+            padding: 0.75rem 1rem;
+            font-size: 0.8125rem;
+            color: var(--color-text-secondary);
+            text-align: center;
         }
 
         .split-card {

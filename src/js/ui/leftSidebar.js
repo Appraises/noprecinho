@@ -410,17 +410,26 @@ function renderOptimizationResults(data) {
     data.singleStoreOptions.slice(0, 3).forEach((opt, i) => {
         const isFirst = i === 0;
         const hasDistance = opt.distanceKm !== undefined && opt.distanceKm > 0;
+        const itemsHtml = (opt.items || []).map(item => `
+            <div class="store-option__item">
+                <span class="store-option__item-name">${item.productName}</span>
+                <span class="store-option__item-price">R$ ${item.price.toFixed(2).replace('.', ',')}${item.quantity > 1 ? ` x${item.quantity}` : ''}</span>
+            </div>
+        `).join('');
         html += `
             <div class="store-option ${isFirst ? 'store-option--best' : ''}" data-store-id="${opt.store.id}">
-                <div class="store-option__main">
-                    <span class="store-option__name">${opt.store.name}</span>
-                    ${hasDistance ? `<span class="store-option__distance">📍 ${opt.distanceKm} km</span>` : ''}
+                <div class="store-option__header">
+                    <div class="store-option__main">
+                        <span class="store-option__name">${opt.store.name}</span>
+                        ${hasDistance ? `<span class="store-option__distance">📍 ${opt.distanceKm} km</span>` : ''}
+                    </div>
+                    <div class="store-option__prices">
+                        <span class="store-option__total">R$ ${opt.total.toFixed(2).replace('.', ',')}</span>
+                        ${hasDistance && opt.travelCost > 0 ? `<span class="store-option__travel">+ R$ ${opt.travelCost.toFixed(2).replace('.', ',')} combustível</span>` : ''}
+                    </div>
                 </div>
-                <div class="store-option__prices">
-                    <span class="store-option__total">R$ ${opt.total.toFixed(2).replace('.', ',')}</span>
-                    ${hasDistance && opt.travelCost > 0 ? `<span class="store-option__travel">+ R$ ${opt.travelCost.toFixed(2).replace('.', ',')} combustível</span>` : ''}
-                </div>
-                ${opt.itemsMissing?.length ? `<span class="store-option__missing">(faltam ${opt.itemsMissing.length})</span>` : ''}
+                ${opt.itemsMissing?.length ? `<span class="store-option__missing">(faltam ${opt.itemsMissing.length}: ${opt.itemsMissing.join(', ')})</span>` : ''}
+                ${itemsHtml ? `<div class="store-option__items">${itemsHtml}</div>` : ''}
             </div>
         `;
     });
@@ -447,13 +456,13 @@ function renderOptimizationResults(data) {
                 <div class="split-recommendation__stores">
                     <div class="split-store" data-store-id="${storeA.id}">
                         <div class="split-store__name">${storeA.name}</div>
-                        <div class="split-store__items">${itemsA.map(i => i.productName || i.name).join(', ')}</div>
+                        <div class="split-store__items">${itemsA.map(i => `<div class="split-item"><span>${i.productName || i.name}</span><span class="split-item__price">R$ ${(i.price || 0).toFixed(2).replace('.', ',')}</span></div>`).join('')}</div>
                         <div class="split-store__total">R$ ${totalA.toFixed(2).replace('.', ',')}</div>
                     </div>
                     <div class="split-divider">+</div>
                     <div class="split-store" data-store-id="${storeB.id}">
                         <div class="split-store__name">${storeB.name}</div>
-                        <div class="split-store__items">${itemsB.map(i => i.productName || i.name).join(', ')}</div>
+                        <div class="split-store__items">${itemsB.map(i => `<div class="split-item"><span>${i.productName || i.name}</span><span class="split-item__price">R$ ${(i.price || 0).toFixed(2).replace('.', ',')}</span></div>`).join('')}</div>
                         <div class="split-store__total">R$ ${totalB.toFixed(2).replace('.', ',')}</div>
                     </div>
                 </div>
