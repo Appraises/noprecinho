@@ -356,13 +356,28 @@ async function runOptimization() {
         }
 
         if (!currentListId) {
-            console.log('Still no list ID, creating default list...');
+            console.log('Still no list ID, creating default list with local items...');
             try {
-                const newList = await api.createShoppingList({ name: 'Minha Lista' });
+                // Get local items to migrate
+                const localItems = JSON.parse(localStorage.getItem('precoja_shopping_list') || '[]');
+                const itemsToCreate = localItems.map(i => ({
+                    productName: i.productName,
+                    quantity: i.quantity || 1,
+                    unit: 'un'
+                }));
+
+                const newList = await api.createShoppingList({
+                    name: 'Minha Lista',
+                    items: itemsToCreate
+                });
                 currentListId = newList.id;
+
+                // Clear local storage as we migrated to server
+                localStorage.removeItem('precoja_shopping_list');
             } catch (e) {
                 console.error('Failed to auto-create list:', e);
-                throw new Error('Erro ao criar lista de compras. Tente novamente.');
+                const msg = e.message || 'Erro ao criar lista de compras';
+                throw new Error(`${msg}. Tente novamente.`);
             }
         }
 
@@ -389,10 +404,10 @@ async function runOptimization() {
                         { store: split.storeB, items: split.storeBItems }
                     ]
                 });
-            } else if (optimizationData.singleStoreOptions?.length > 0) {
+            } else if (optimizationData.recommendation === 'single' && optimizationData.singleStoreOptions?.length > 0) {
                 const best = optimizationData.singleStoreOptions[0];
                 onHighlightStores({
-                    stops: [{ store: best.store, items: best.items || [] }]
+                    stops: [{ store: best.store, items: best.missingItems ? 0 : 1 }] // 1 implies found
                 });
             }
         }
