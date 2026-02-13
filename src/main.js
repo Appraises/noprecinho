@@ -19,7 +19,7 @@ import './css/reportModal.css';
 import './css/responsive.css';
 
 // Core modules
-import { initMap, centerOnUser, addStoreMarkers, selectStore, searchAndPanToStore, searchAddress, showRouteToStore, clearRoute, openDirections, getUserLocation } from './js/map.js';
+import { initMap, centerOnUser, addStoreMarkers, selectStore, searchAndPanToStore, searchAddress, showRouteToStore, showMultiStopRoute, clearRoute, openDirections, getUserLocation, showShoppingIndicators, clearShoppingIndicators } from './js/map.js';
 import { formatDistance, getCategoryIcon, getCategoryLabel } from './js/utils/formatters.js';
 import { initFilters, getActiveCategories } from './js/ui/filters.js';
 import { initStorePreview, showStorePreview, hideStorePreview, updateRouteInfo } from './js/ui/storePreview.js';
@@ -212,10 +212,37 @@ async function init() {
 
   // Initialize left sidebar with store highlight and location callbacks
   initLeftSidebar({
-    onHighlightStores: (storeIds) => {
-      // Highlight stores on map
-      if (storeIds && storeIds.length > 0) {
-        const store = appState.stores.find(s => storeIds.includes(s.id));
+    onHighlightStores: async (options) => {
+      // Clear previous labels and routes
+      clearShoppingIndicators();
+      clearRoute();
+
+      if (options.stops && options.stops.length > 0) {
+        // Show labels above stores
+        showShoppingIndicators(options.stops);
+
+        // Trace route
+        if (options.stops.length === 1) {
+          const store = options.stops[0].store || options.stops[0];
+          selectStore(store.id);
+          if (appState.userLocation) {
+            const routeInfo = await showRouteToStore(store, appState.userLocation);
+            if (routeInfo) updateRouteInfo(routeInfo);
+          }
+        } else {
+          // Multi-stop route
+          if (appState.userLocation) {
+            const stops = options.stops.map(s => s.store || s);
+            const routeInfo = await showMultiStopRoute(stops, appState.userLocation);
+            if (routeInfo) updateRouteInfo(routeInfo);
+          }
+        }
+
+        // Fit map to show all indicators and route
+        appState.mapInstance.invalidateSize();
+      } else if (options.storeIds) {
+        // Legacy highlight by IDs
+        const store = appState.stores.find(s => options.storeIds.includes(s.id));
         if (store) {
           selectStore(store.id);
           appState.mapInstance.setView([store.lat, store.lng], 15);

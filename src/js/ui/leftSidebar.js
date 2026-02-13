@@ -336,6 +336,24 @@ async function runOptimization() {
         }
 
         renderOptimizationResults(optimizationData);
+
+        // Automatically show the best option on the map
+        if (onHighlightStores && optimizationData) {
+            if (optimizationData.recommendation === 'split' && optimizationData.twoStoreSplit) {
+                const split = optimizationData.twoStoreSplit;
+                onHighlightStores({
+                    stops: [
+                        { store: split.storeA, items: split.storeAItems },
+                        { store: split.storeB, items: split.storeBItems }
+                    ]
+                });
+            } else if (optimizationData.singleStoreOptions?.length > 0) {
+                const best = optimizationData.singleStoreOptions[0];
+                onHighlightStores({
+                    stops: [{ store: best.store, items: best.items || [] }]
+                });
+            }
+        }
     } catch (error) {
         console.error('Optimization error:', error);
         results.innerHTML = `
@@ -436,21 +454,42 @@ function renderOptimizationResults(data) {
     const mapBtn = document.getElementById('show-on-map-btn');
     if (mapBtn && onHighlightStores) {
         mapBtn.addEventListener('click', () => {
-            const storeIds = [];
             if (data.twoStoreSplit) {
-                storeIds.push(data.twoStoreSplit.storeA.id, data.twoStoreSplit.storeB.id);
+                onHighlightStores({
+                    stops: [
+                        { store: data.twoStoreSplit.storeA, items: data.twoStoreSplit.storeAItems },
+                        { store: data.twoStoreSplit.storeB, items: data.twoStoreSplit.storeBItems }
+                    ]
+                });
             }
-            onHighlightStores(storeIds);
             closeSidebar();
         });
     }
 
     // Bind store clicks
-    results.querySelectorAll('[data-store-id]').forEach(el => {
-        el.style.cursor = 'pointer';
+    results.querySelectorAll('.store-option').forEach(el => {
         el.addEventListener('click', () => {
-            if (onHighlightStores) {
-                onHighlightStores([el.dataset.storeId]);
+            const storeId = el.dataset.storeId;
+            const opt = data.singleStoreOptions.find(o => o.store.id === storeId);
+            if (opt && onHighlightStores) {
+                onHighlightStores({
+                    stops: [{ store: opt.store, items: opt.items || [] }]
+                });
+            }
+        });
+    });
+
+    results.querySelectorAll('.split-store').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const storeId = el.dataset.storeId;
+            const split = data.twoStoreSplit;
+            if (split && onHighlightStores) {
+                const store = split.storeA.id === storeId ? split.storeA : split.storeB;
+                const items = split.storeA.id === storeId ? split.storeAItems : split.storeBItems;
+                onHighlightStores({
+                    stops: [{ store, items }]
+                });
             }
         });
     });

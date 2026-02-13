@@ -15,7 +15,7 @@ import {
 } from '../api.js';
 import { showToast } from './toast.js';
 import { showError, createSkeletonCards } from './loadingUI.js';
-import { selectStore, showRouteToStore, showMultiStopRoute, updateRouteInfo, getUserLocation } from '../map.js';
+import { selectStore, showRouteToStore, showMultiStopRoute, updateRouteInfo, getUserLocation, showShoppingIndicators, clearShoppingIndicators } from '../map.js';
 import { showStorePreview } from './storePreview.js';
 
 let listPanel = null;
@@ -325,7 +325,15 @@ async function loadListDetail(listId) {
                     showStorePreview(store);
 
                     // Show route if location available
-                    if (userLocation) {
+                    if (store && userLocation) {
+                        // Clear previous indicators
+                        clearShoppingIndicators();
+                        clearRoute();
+
+                        // Show indicator for this store
+                        showShoppingIndicators([{ store, items: list.items || [] }]);
+
+                        selectStore(store.id);
                         const routeInfo = await showRouteToStore(store, userLocation);
                         if (routeInfo) {
                             updateRouteInfo(routeInfo);
@@ -349,10 +357,20 @@ async function loadListDetail(listId) {
                 const userLocation = getUserLocation();
 
                 if (split && userLocation) {
-                    const stops = [split.store1, split.store2];
+                    const stops = [
+                        { store: split.store1, items: split.items1 },
+                        { store: split.store2, items: split.items2 }
+                    ];
+
+                    // Clear previous
+                    clearShoppingIndicators();
+                    clearRoute();
+
+                    // Show labels
+                    showShoppingIndicators(stops);
 
                     // Show route on map
-                    const routeInfo = await showMultiStopRoute(stops, userLocation);
+                    const routeInfo = await showMultiStopRoute([split.store1, split.store2], userLocation);
 
                     if (routeInfo) {
                         updateRouteInfo(routeInfo);

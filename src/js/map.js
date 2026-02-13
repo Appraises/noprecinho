@@ -3,11 +3,11 @@ import L from 'leaflet';
 import 'leaflet.markercluster';
 import { stores as storeData } from './data/mockData.js';
 
-let mapInstance = null;
 let markersLayer = null;
 let categoryLayers = {};
-let userMarker = null;
 let routeLayer = null;
+let userMarker = null;
+let shoppingIndicatorsLayer = null;
 let selectedStoreId = null;
 let storeMarkers = {};
 let currentTileLayer = null;
@@ -458,6 +458,50 @@ export async function showRouteToStore(store, userLocation) {
     }
 }
 
+// Show shopping list items above stores on map
+export function showShoppingIndicators(stops) {
+    if (!mapInstance || !shoppingIndicatorsLayer) return;
+
+    // Clear existing indicators
+    shoppingIndicatorsLayer.clearLayers();
+
+    stops.forEach(stop => {
+        const store = stop.store || stop;
+        const items = stop.items || stop.storeAItems || stop.storeBItems || [];
+
+        if (!store.lat || !store.lng) return;
+
+        // Create a custom label icon
+        const itemsHtml = items.map(i => `• ${i.productName || i.name}`).join('<br>');
+        const labelHtml = `
+            <div class="shopping-label">
+                <div class="shopping-label__title">${store.name}</div>
+                <div class="shopping-label__items">${itemsHtml}</div>
+            </div>
+        `;
+
+        const labelIcon = L.divIcon({
+            className: 'shopping-label-container',
+            html: labelHtml,
+            iconSize: [120, 'auto'],
+            iconAnchor: [60, 0] // Anchor at top middle
+        });
+
+        L.marker([store.lat, store.lng], {
+            icon: labelIcon,
+            interactive: false,
+            zIndexOffset: 1000
+        }).addTo(shoppingIndicatorsLayer);
+    });
+}
+
+// Clear shopping indicators
+export function clearShoppingIndicators() {
+    if (shoppingIndicatorsLayer) {
+        shoppingIndicatorsLayer.clearLayers();
+    }
+}
+
 // Show route with multiple stops
 export async function showMultiStopRoute(stops, userLocation) {
     if (!mapInstance || !stops || stops.length === 0 || !userLocation) return null;
@@ -614,3 +658,51 @@ export function removeTemporaryMarker(marker) {
 export function getCategoryConfig() {
     return categoryConfig;
 }
+
+// Internal styles for map markers/labels
+const style = document.createElement('style');
+style.innerHTML = `
+    .shopping-label-container {
+        background: none;
+        border: none;
+    }
+    .shopping-label {
+        background: white;
+        border: 2px solid var(--color-primary, #6C5CE7);
+        border-radius: 8px;
+        padding: 6px 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-family: inherit;
+        pointer-events: none;
+        position: relative;
+        bottom: 80px; /* Position above marker */
+        transform: translateX(-50%);
+        min-width: 140px;
+        z-index: 1000;
+    }
+    .shopping-label::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid var(--color-primary, #6C5CE7);
+    }
+    .shopping-label__title {
+        font-weight: 700;
+        font-size: 11px;
+        color: var(--color-primary, #6C5CE7);
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 2px;
+    }
+    .shopping-label__items {
+        font-size: 12px;
+        color: #333;
+        line-height: 1.4;
+    }
+`;
+document.head.appendChild(style);
