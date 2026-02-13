@@ -241,7 +241,7 @@ function renderItems(items) {
             <span class="items-list__name">${item.productName}</span>
             <span class="items-list__qty">${item.quantity > 1 ? `x${item.quantity}` : ''}</span>
             ${item.bestPrice ? `<span class="items-list__price">R$ ${item.bestPrice.toFixed(2).replace('.', ',')}</span>` : ''}
-            <button class="items-list__delete" data-id="${item.id}" data-name="${item.productName}">&times;</button>
+            <button class="items-list__delete" data-id="${item.id || ''}" data-name="${item.productName}">&times;</button>
         </li>
     `).join('');
 
@@ -302,7 +302,10 @@ async function addItem(name) {
  */
 async function removeItem(id, name) {
     try {
-        if (currentListId && id) {
+        // Ensure ID is valid and not "undefined" string from malformed HTML
+        const hasValidId = id && id !== 'undefined' && id !== 'null';
+
+        if (currentListId && hasValidId) {
             // Remove from server
             await api.deleteShoppingListItem(currentListId, id);
             await loadCurrentList();
@@ -318,6 +321,10 @@ async function removeItem(id, name) {
         document.getElementById('optimization-section').hidden = true;
     } catch (error) {
         console.error('Remove item error:', error);
+        // showToast is imported from toast.js? NO, it's not imported in leftSidebar.js yet.
+        // Let's rely on console for now to avoid import errors, or try to alert.
+        console.log('Failed to remove item. Reloading list...');
+        if (currentListId) await loadCurrentList(); // Try to reload to sync state
     }
 }
 
