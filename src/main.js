@@ -107,7 +107,13 @@ async function init() {
   if (user) {
     const avatarBtn = document.getElementById('user-avatar');
     if (avatarBtn) {
-      avatarBtn.innerHTML = `<img src="${user.avatar}" alt="${user.name}" style="width: 100%; height: 100%; border-radius: 50%;">`;
+      if (user.avatar) {
+        avatarBtn.innerHTML = `<img src="${user.avatar}" alt="${user.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+      } else {
+        // Fallback to user initial letter
+        const initial = (user.name || user.email || 'U').charAt(0).toUpperCase();
+        avatarBtn.innerHTML = `<span>${initial}</span>`;
+      }
       avatarBtn.title = user.name;
 
       // Add logout option on click (simple implementation)
@@ -343,6 +349,10 @@ async function searchForProduct(productName) {
       searchInput.value = productName;
     }
 
+    // Show clear button
+    const clearBtn = document.getElementById('search-clear');
+    if (clearBtn) clearBtn.classList.remove('hidden');
+
   } catch (error) {
     console.error('Search error:', error);
     showToast('error', 'Erro ao buscar produto');
@@ -359,6 +369,11 @@ function clearProductSearch() {
   };
   const searchInput = document.getElementById('search-input');
   if (searchInput) searchInput.value = '';
+
+  // Hide clear button
+  const clearBtn = document.getElementById('search-clear');
+  if (clearBtn) clearBtn.classList.add('hidden');
+
   refreshData();
 }
 
@@ -597,6 +612,11 @@ function setupEventListeners(map) {
   // Filter button
   document.getElementById('filter-btn')?.addEventListener('click', () => {
     openFilterModal(appState.filterSettings);
+  });
+
+  // Search clear button
+  document.getElementById('search-clear')?.addEventListener('click', () => {
+    clearProductSearch();
   });
 
   // Location button

@@ -75,7 +75,7 @@
         bottom: 0;
         width: 100%;
         height: auto;
-        max-height: 40vh;
+        max-height: 50vh;
         transform: translateY(100%);
         /* Hidden off-screen */
         border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
@@ -83,6 +83,7 @@
         border-top: 1px solid var(--color-border);
         transition: transform var(--transition-normal);
         z-index: var(--z-sticky);
+        padding-bottom: env(safe-area-inset-bottom);
     }
 
     /* Only show when --visible class is added */
@@ -159,6 +160,11 @@
     /* Map legend hide on mobile */
     .map-legend {
         display: none;
+    }
+
+    /* Hide Leaflet attribution on mobile to avoid visual clutter */
+    .leaflet-control-attribution {
+        display: none !important;
     }
 
     /* Toast at top on mobile */
