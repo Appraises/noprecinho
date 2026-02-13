@@ -496,7 +496,7 @@
 
 .autocomplete-results {
     position: absolute;
-    bottom: 100%;
+    top: 100%;
     left: 0;
     right: 0;
     background: var(--color-surface);
@@ -505,8 +505,8 @@
     box-shadow: var(--shadow-lg);
     max-height: 200px;
     overflow-y: auto;
-    z-index: 1002;
-    margin-bottom: 0.5rem;
+    z-index: 1200;
+    margin-top: 0.25rem;
 }
 
 .autocomplete-item {
@@ -526,6 +526,7 @@
 .autocomplete-item__name {
     font-size: 0.875rem;
     font-weight: 500;
+    color: var(--color-text);
 }
 
 /* Mobile */
