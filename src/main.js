@@ -147,9 +147,8 @@ async function init() {
     );
   }
 
-  // Wait for critical background tasks if necessary, or just let them run
-  // For now, we don't want to block the map or UI initialization
-  Promise.all(initPromises);
+  // Wait for critical background tasks (API check, DB init) before proceeding
+  await Promise.all(initPromises);
 
   // Register service worker
   if ('serviceWorker' in navigator) {
