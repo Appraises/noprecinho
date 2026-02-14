@@ -436,13 +436,8 @@ async function runOptimization() {
                 ];
 
                 // Sort stops by distance from user (Closest -> Furthest)
-                if (userLocation) {
-                    stops.sort((a, b) => {
-                        const distA = getDist(userLocation.lat, userLocation.lng, a.store.lat, a.store.lng);
-                        const distB = getDist(userLocation.lat, userLocation.lng, b.store.lat, b.store.lng);
-                        return distA - distB;
-                    });
-                }
+                // Server already orders by proximity (Closest -> Furthest)
+                // We trust the server's order.
 
                 onHighlightStores({ stops });
             } else if (optimizationData.recommendation === 'single' && optimizationData.singleStoreOptions?.length > 0) {
@@ -500,10 +495,17 @@ function renderOptimizationResults(data) {
 
         const hasRoute = split.routeDescription && split.totalDistanceKm > 0;
 
+        // Check if forced split
+        const singleIncomplete = data.singleStoreOptions && data.singleStoreOptions[0] && data.singleStoreOptions[0].itemsMissing && data.singleStoreOptions[0].itemsMissing.length > 0;
+        const forcedMsg = singleIncomplete ? '<div style="font-size: 0.85em; color: #ff9f43; margin-top: 4px;">⚠️ Única opção com todos os itens</div>' : '';
+
         html += `
             <div class="split-recommendation">
                 <div class="split-recommendation__header">
-                    <span>⭐ Melhor opção (2 lojas)</span>
+                    <div>
+                        <span>⭐ Melhor opção (2 lojas)</span>
+                        ${forcedMsg}
+                    </div>
                     <span class="split-recommendation__badge">Economize ${split.savingsPercent || 0}%</span>
                 </div>
                 ${hasRoute ? `<div class="split-route">🚗 ${split.routeDescription} (${split.totalDistanceKm} km)</div>` : ''}
