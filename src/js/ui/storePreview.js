@@ -4,11 +4,13 @@ import { formatTimeAgo, formatPrice, formatDistance, getCategoryIcon } from '../
 let previewElement = null;
 let onDetailsClickCallback = null;
 let onReportClickCallback = null;
+let onCloseCallback = null;
 
-export function initStorePreview(onDetailsClick, onReportClick) {
+export function initStorePreview(onDetailsClick, onReportClick, onClose) {
     previewElement = document.getElementById('store-preview');
     onDetailsClickCallback = onDetailsClick;
     onReportClickCallback = onReportClick;
+    onCloseCallback = onClose;
 
     // Details button
     const detailsBtn = document.getElementById('preview-details-btn');
@@ -116,6 +118,11 @@ export function hideStorePreview() {
     if (!previewElement) return;
     previewElement.classList.remove('store-preview--visible');
     previewElement.classList.add('store-preview--hidden');
+    
+    // Trigger onClose callback to clean up (e.g. clear routes)
+    if (onCloseCallback) {
+        onCloseCallback();
+    }
 }
 
 export function isPreviewVisible() {

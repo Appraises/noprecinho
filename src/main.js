@@ -232,6 +232,14 @@ async function init() {
       if (appState.selectedStore) {
         openReportModal(appState.selectedStore);
       }
+    },
+    // On close/dismiss
+    () => {
+      clearRoute();
+      if (appState.selectedStore) {
+        appState.selectedStore = null;
+        selectStore(null);
+      }
     }
   );
 

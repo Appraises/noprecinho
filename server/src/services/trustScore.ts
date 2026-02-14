@@ -42,12 +42,12 @@ export function calculateTimeDecay(lastActivityDate: Date | null): number {
 
 /** Calculate trustScore using the composite formula. */
 export function calculateTrustScore(params: {
-    priceReportsCount: number;
+    validatedSubmissionsCount: number;
     totalVotesReceived: number;
     positiveVotesReceived: number;
     lastActivityDate: Date | null;
 }): number {
-    const V = normalizeSubmissions(params.priceReportsCount);
+    const V = normalizeSubmissions(params.validatedSubmissionsCount);
     const E = calculateErrorRate(params.totalVotesReceived, params.positiveVotesReceived);
     const T = calculateTimeDecay(params.lastActivityDate);
     const score = ALPHA * V + BETA * (1 - E) + GAMMA * T;
@@ -59,7 +59,6 @@ export async function recalculateAndSaveTrustScore(userId: string): Promise<numb
     const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
-            priceReportsCount: true,
             totalVotesReceived: true,
             positiveVotesReceived: true,
             updatedAt: true,
@@ -73,10 +72,18 @@ export async function recalculateAndSaveTrustScore(userId: string): Promise<numb
 
     if (!user) return 0.5;
 
+    // V_u: Count of user's submissions that have been validated (at least one validation)
+    const validatedSubmissionsCount = await prisma.price.count({
+        where: {
+            reporterId: userId,
+            validationCount: { gt: 0 }
+        }
+    });
+
     const lastActivityDate = user.prices[0]?.createdAt ?? user.updatedAt;
 
     const trustScore = calculateTrustScore({
-        priceReportsCount: user.priceReportsCount,
+        validatedSubmissionsCount,
         totalVotesReceived: user.totalVotesReceived,
         positiveVotesReceived: user.positiveVotesReceived,
         lastActivityDate,
