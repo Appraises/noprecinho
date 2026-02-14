@@ -587,10 +587,10 @@ router.post('/:id/optimize', authMiddleware, async (req: AuthRequest, res: Respo
                 const netSavings = Math.round((bestSingleEffective - effectiveTotal) * 100) / 100;
 
                 // Recommendation criteria:
-                // 1. Valid split (net savings > 0 OR force split if single is incomplete)
+                // We ALWAYS track the best split option if it covers all items.
+                // We will decide whether to RECOMMEND it at the end (Step 4).
 
-                // Only recommend if net savings (after travel) is positive OR if we need to split to get all items
-                if ((netSavings > 0 || hasMissingItems) && (!bestTwoStoreSplit || effectiveTotal < bestTwoStoreSplit.effectiveTotal)) {
+                if (!bestTwoStoreSplit || effectiveTotal < bestTwoStoreSplit.effectiveTotal) {
                     // Check who is closer for ordering in the result
                     let firstStore = storeAInfo;
                     let secondStore = storeBInfo;
