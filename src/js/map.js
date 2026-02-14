@@ -484,12 +484,27 @@ export function showShoppingIndicators(stops) {
 
         if (!store.lat || !store.lng) return;
 
+        // Limit items to prevent huge labels
+        const maxItems = 5;
+        let displayItems = items;
+        let moreCount = 0;
+
+        if (items.length > maxItems) {
+            displayItems = items.slice(0, maxItems);
+            moreCount = items.length - maxItems;
+        }
+
         // Create a custom label icon
-        const itemsHtml = items.map(i => `• ${i.productName || i.name}`).join('<br>'); // Defensive map check already handled by empty array default
+        const itemsHtml = displayItems.map(i => `• ${i.productName || i.name}`).join('<br>');
+        const moreHtml = moreCount > 0 ? `<div style="font-style:italic; color:#666; margin-top:2px; font-size:11px;">+ mais ${moreCount} itens</div>` : '';
+
         const labelHtml = `
             <div class="shopping-label">
                 <div class="shopping-label__title">${store.name}</div>
-                <div class="shopping-label__items">${itemsHtml}</div>
+                <div class="shopping-label__items">
+                    ${itemsHtml}
+                    ${moreHtml}
+                </div>
             </div>
         `;
 

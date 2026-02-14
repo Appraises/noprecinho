@@ -494,6 +494,7 @@ router.post('/:id/optimize', authMiddleware, async (req: AuthRequest, res: Respo
 
         const bestSingleEffective = topSingleStores[0]?.effectiveTotal || Infinity;
         const bestSingleTotal = topSingleStores[0]?.total || Infinity;
+        const hasMissingItems = topSingleStores.length > 0 && topSingleStores[0].itemsMissing && topSingleStores[0].itemsMissing.length > 0;
 
         // Try all pairs of stores
         for (let i = 0; i < storeIds.length; i++) {
@@ -536,7 +537,7 @@ router.post('/:id/optimize', authMiddleware, async (req: AuthRequest, res: Respo
 
                 if (!allItemsCovered) continue;
 
-                // Calculate optimal route distance: User → A → B → User OR User → B → A → User
+                // Calculate optimal route distance: User → Closest → Furthest → User
                 let totalDistanceKm = 0;
                 let routeDescription = '';
 
@@ -545,17 +546,35 @@ router.post('/:id/optimize', authMiddleware, async (req: AuthRequest, res: Respo
                     const distUserToB = calculateDistance(userLat, userLng, storeBInfo.lat, storeBInfo.lng);
                     const distAtoB = calculateDistance(storeAInfo.lat, storeAInfo.lng, storeBInfo.lat, storeBInfo.lng);
 
-                    // Route 1: User → A → B → User
-                    const route1 = distUserToA + distAtoB + distUserToB;
-                    // Route 2: User → B → A → User
-                    const route2 = distUserToB + distAtoB + distUserToA;
+                    // Force order: User -> Closest -> Furthest
+                    // If A is closer: User -> A -> B -> User
+                    // If B is closer: User -> B -> A -> User
 
-                    if (route1 <= route2) {
-                        totalDistanceKm = route1;
-                        routeDescription = `Você → ${storeAInfo.name} → ${storeBInfo.name} → Você`;
+                    // We swap A and B in the result object if B is closer, to ensure the UI shows the path correctly
+                    // However, we must preserve the item assignments.
+
+                    // Route 1: User → A → B → User
+                    const route1 = distUserToA + distAtoB + distUserToB; // strictly this is User->A->B->? (implicitly back to user for cost, but for display we just want the path)
+                    // actually for cost we usually do round trip.
+
+                    // Let's stick to the travel cost logic (round trip usually implies returning home).
+                    // But for the "Route Description", we want "You -> First -> Second".
+
+                    if (distUserToA <= distUserToB) {
+                        totalDistanceKm = distUserToA + distAtoB + distUserToB; // Loop
+                        routeDescription = `Você → ${storeAInfo.name} → ${storeBInfo.name}`;
                     } else {
-                        totalDistanceKm = route2;
-                        routeDescription = `Você → ${storeBInfo.name} → ${storeAInfo.name} → Você`;
+                        // Swap stores for the split object so Store A is always the first stop
+                        // We will handle this swap when assigning to bestTwoStoreSplit below? 
+                        // No, bestTwoStoreSplit has storeA and storeB fixed by the loop. 
+                        // We should just flag which is first? Or swap them in the result?
+                        // Swapping in the result is cleaner for the frontend.
+
+                        totalDistanceKm = distUserToB + distAtoB + distUserToA; // Loop
+                        routeDescription = `Você → ${storeBInfo.name} → ${storeAInfo.name}`;
+
+                        // We'll trust the distance calcs, but we need to pass this ordering info or swap them.
+                        // Let's swap them in the construction of bestTwoStoreSplit if needed.
                     }
                 }
 
@@ -567,15 +586,39 @@ router.post('/:id/optimize', authMiddleware, async (req: AuthRequest, res: Respo
                 const savingsPercent = bestSingleTotal > 0 ? savings / bestSingleTotal : 0;
                 const netSavings = Math.round((bestSingleEffective - effectiveTotal) * 100) / 100;
 
-                // Only recommend if net savings (after travel) is positive
-                if (netSavings > 0 && (!bestTwoStoreSplit || effectiveTotal < bestTwoStoreSplit.effectiveTotal)) {
+                // Recommendation criteria:
+                // 1. Valid split (net savings > 0 OR force split if single is incomplete)
+
+                // Only recommend if net savings (after travel) is positive OR if we need to split to get all items
+                if ((netSavings > 0 || hasMissingItems) && (!bestTwoStoreSplit || effectiveTotal < bestTwoStoreSplit.effectiveTotal)) {
+                    // Check who is closer for ordering in the result
+                    let firstStore = storeAInfo;
+                    let secondStore = storeBInfo;
+                    let firstItems = storeAItems;
+                    let secondItems = storeBItems;
+                    let firstTotal = storeATotal;
+                    let secondTotal = storeBTotal;
+
+                    if (hasUserLocation && storeAInfo.lat && storeAInfo.lng && storeBInfo.lat && storeBInfo.lng) {
+                        const distUserToA = calculateDistance(userLat, userLng, storeAInfo.lat, storeAInfo.lng);
+                        const distUserToB = calculateDistance(userLat, userLng, storeBInfo.lat, storeBInfo.lng);
+                        if (distUserToB < distUserToA) {
+                            firstStore = storeBInfo;
+                            secondStore = storeAInfo;
+                            firstItems = storeBItems;
+                            secondItems = storeAItems;
+                            firstTotal = storeBTotal;
+                            secondTotal = storeATotal;
+                        }
+                    }
+
                     bestTwoStoreSplit = {
-                        storeA: storeAInfo,
-                        storeB: storeBInfo,
-                        storeAItems,
-                        storeBItems,
-                        storeATotal: Math.round(storeATotal * 100) / 100,
-                        storeBTotal: Math.round(storeBTotal * 100) / 100,
+                        storeA: firstStore,
+                        storeB: secondStore,
+                        storeAItems: firstItems,
+                        storeBItems: secondItems,
+                        storeATotal: Math.round(firstTotal * 100) / 100,
+                        storeBTotal: Math.round(secondTotal * 100) / 100,
                         combinedTotal,
                         travelCost: Math.round(travelCost * 100) / 100,
                         effectiveTotal,
@@ -591,10 +634,18 @@ router.post('/:id/optimize', authMiddleware, async (req: AuthRequest, res: Respo
 
         // Step 4: Build recommendation
         let recommendation: 'single' | 'split' | 'empty' = 'single';
-        if (bestTwoStoreSplit &&
-            bestTwoStoreSplit.netSavings > 0 &&
-            bestTwoStoreSplit.savingsPercent >= savingsThreshold * 100) {
-            recommendation = 'split';
+
+        // Force split if single store is missing items but split is not
+        const singleHasMissing = topSingleStores.length > 0 && topSingleStores[0].itemsMissing && topSingleStores[0].itemsMissing.length > 0;
+
+        if (bestTwoStoreSplit) {
+            if (singleHasMissing) {
+                // If single option is incomplete, ALWAYS prefer split if it exists
+                recommendation = 'split';
+            } else if (bestTwoStoreSplit.netSavings > 0 && bestTwoStoreSplit.savingsPercent >= savingsThreshold * 100) {
+                // Otherwise only if savings are good
+                recommendation = 'split';
+            }
         }
 
         // Build items with best prices
