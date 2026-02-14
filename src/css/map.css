@@ -354,8 +354,10 @@
     color: var(--color-text-secondary);
 }
 
-.map-legend__color {
-    width: 12px;
-    height: 12px;
-    border-radius: var(--radius-sm);
+
+/* Hide zoom controls on mobile */
+@media (max-width: 768px) {
+    .leaflet-control-zoom {
+        display: none !important;
+    }
 }
