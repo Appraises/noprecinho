@@ -552,7 +552,7 @@ function renderOptimizationResults(data) {
                 </div>
             `).join('');
             html += `
-                <div class="store-option ${isFirst ? 'store-option--best' : ''}" data-store-id="${opt.store.id}">
+                <div class="store-option ${isFirst ? 'store-option--selected' : ''}" data-store-id="${opt.store.id}">
                     <div class="store-option__header">
                         <div class="store-option__main">
                             <span class="store-option__name">${opt.store.name}</span>
@@ -572,6 +572,27 @@ function renderOptimizationResults(data) {
     }
 
     results.innerHTML = html;
+
+    // Bind Store Option Click Handlers
+    results.querySelectorAll('.store-option').forEach(option => {
+        option.addEventListener('click', () => {
+            // Remove selection from all
+            results.querySelectorAll('.store-option').forEach(o => o.classList.remove('store-option--selected'));
+            // Add to clicked
+            option.classList.add('store-option--selected');
+
+            // Trigger map update
+            const storeId = option.dataset.storeId;
+            const selectedOpt = data.singleStoreOptions.find(o => o.store.id === storeId);
+
+            if (selectedOpt && onHighlightStores) {
+                onHighlightStores({
+                    stops: [{ store: selectedOpt.store, items: selectedOpt.items }]
+                });
+            }
+            if (window.innerWidth < 768) closeSidebar();
+        });
+    });
 
     // Bind map button
     const mapBtn = document.getElementById('show-on-map-btn');
